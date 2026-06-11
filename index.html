@@ -3415,8 +3415,8 @@ checkHero();
     const targets = [
       { sel: '.sec-ttl,.sec-sub,.sec-ew', cls: 'reveal-left' },
       { sel: '.svc-card,.pkg-card,.prod-card,.intro-card,.testi-card,.loss-card,.exp-item,.cert-bg,.faq-item,.ct-row,.call-box,.intro-savings,.isav', cls: 'reveal-up' },
-      { sel: '.proc-step', cls: 'reveal-scale' },
       { sel: '.hcard,.fw,.exp-block,.cmp-section', cls: 'reveal-up' },
+      { sel: '.flip-wrap,.ind-card', cls: 'reveal-up' },
     ];
 
     const obs = new IntersectionObserver(entries => {
@@ -3432,12 +3432,16 @@ checkHero();
       document.querySelectorAll(sel).forEach((el, i) => {
         if (!el.classList.contains('fu')) {
           el.classList.add(cls);
-          // Stagger siblings
           const delay = Math.min(i % 6, 5);
           el.classList.add('rd' + (delay + 1));
           obs.observe(el);
         }
       });
+    });
+
+    // Catch-all: observe any element already marked reveal-up/left/scale in HTML
+    document.querySelectorAll('.reveal-up:not(.visible),.reveal-left:not(.visible),.reveal-scale:not(.visible)').forEach(el => {
+      if (!el.dataset.revealBound) { el.dataset.revealBound = '1'; obs.observe(el); }
     });
   }
 
