@@ -788,187 +788,161 @@ function startTypewriter(){
   window.addEventListener('resize', () => { if(active) resize(); }, { passive: true });
 })();
 
-// ── 8. METALLVERARBEITUNG — ALUMINIUM CNC ────
+// ── 8. ALUMINIUM WERTSCHÖPFUNGSKETTE ─────────
 (function(){
   const canvas = document.getElementById('canvas-metall');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   let W, H, animId=null, active=false, frameN=0, partCount=0;
-  let toolX=0, toolY=0, toolTX=0, toolTY=0;
-  let passDir=1, passY=0, machinedY=0, initialized=false;
-  let pathPts=[], chips=[], rpmVis=0;
-  const PASS_GAP=14, TOOL_R=12, FLUTES=4;
+  const chips=[], sprays=[];
 
-  class Chip {
-    constructor(x,y){
-      this.x=x; this.y=y;
-      const a=Math.random()*Math.PI*2, sp=Math.random()*3.5+1;
-      this.vx=Math.cos(a)*sp; this.vy=Math.sin(a)*sp-1.8;
-      this.life=1; this.rot=Math.random()*Math.PI; this.rv=(Math.random()-.5)*.18;
-      this.sx=Math.random()*5+2; this.sy=Math.random()*2+1;
+  // === PROFILE: 6 fins + base (normalized 0-1 within workpiece) ===
+  // 6 fins: x=[0.09,0.17],[0.23,0.31],[0.37,0.45],[0.51,0.59],[0.65,0.73],[0.79,0.87]
+  // Voids (regions to mill out):
+  const VOIDS=[[0,.09],[.17,.06],[.31,.06],[.45,.06],[.59,.06],[.73,.06],[.87,.13]];
+  const BASE_R=0.30; // base = bottom 30% of workpiece height
+  const CYCLE=520; // frames per cycle
+
+  function eio(t){return t<.5?2*t*t:1-(-2*t+2)**2/2;}
+  function resize(){const r=canvas.parentElement.getBoundingClientRect();W=canvas.width=r.width;H=canvas.height=r.height;}
+
+  // Interpolate aluminum color: 0=raw silver, 1=anodized blue
+  function alC(t,alpha=1){const r=Math.round(168+(28-168)*t),g=Math.round(184+(88-184)*t),b=Math.round(200+(200-200)*t);return`rgba(${r},${g},${b},${alpha})`;}
+  function alDk(t,alpha=1){const r=Math.round(85+(15-85)*t),g=Math.round(105+(52-105)*t),b=Math.round(125+(160-125)*t);return`rgba(${r},${g},${b},${alpha})`;}
+  function alBr(t,alpha=1){const r=Math.round(215+(60-215)*t),g=Math.round(232+(140-232)*t),b=Math.round(248+(255-248)*t);return`rgba(${r},${g},${b},${alpha})`;}
+
+  // Draw aluminum workpiece profile
+  function drawWP(cx,cy,wpW,wpH,mill,coat){
+    const gx=cx-wpW/2, gy=cy-wpH/2;
+    const voidH=wpH*(1-BASE_R);
+    // Main block fill
+    const mg=ctx.createLinearGradient(gx,gy,gx+wpW,gy+wpH);
+    mg.addColorStop(0,alDk(coat)); mg.addColorStop(.35,alC(coat)); mg.addColorStop(.65,alBr(coat,.9)); mg.addColorStop(1,alDk(coat));
+    ctx.fillStyle=mg; ctx.fillRect(gx,gy,wpW,wpH);
+    // Mill-out voids progressively
+    if(mill>0){
+      VOIDS.forEach(([vx,vw],vi)=>{
+        const cut=Math.min(1,Math.max(0,mill*VOIDS.length-vi));
+        if(cut>0){
+          ctx.fillStyle='#06101E'; ctx.fillRect(gx+vx*wpW,gy,vw*wpW,voidH*cut);
+          // Wall sheen
+          ctx.fillStyle=alC(coat,.18);
+          ctx.fillRect(gx+vx*wpW,gy,1.5,voidH*cut);
+          ctx.fillRect(gx+(vx+vw)*wpW-1.5,gy,1.5,voidH*cut);
+        }
+      });
     }
-    update(){ this.vy+=.09; this.x+=this.vx; this.y+=this.vy; this.vx*=.97; this.life-=.02; this.rot+=this.rv; }
-    draw(){
-      ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
-      ctx.globalAlpha=this.life*.75;
-      ctx.beginPath(); ctx.ellipse(0,0,this.sx,this.sy,0,0,Math.PI*2);
-      const g=ctx.createLinearGradient(-this.sx,0,this.sx,0);
-      g.addColorStop(0,'#6A8090'); g.addColorStop(.45,'#C4D8E8'); g.addColorStop(1,'#8AACBC');
-      ctx.fillStyle=g; ctx.fill();
-      ctx.strokeStyle='rgba(200,225,245,0.25)'; ctx.lineWidth=.4; ctx.stroke();
-      ctx.globalAlpha=1; ctx.restore();
+    // Top highlight
+    ctx.fillStyle=alBr(coat,.6); ctx.fillRect(gx,gy,wpW,2);
+    // Anodized sheen overlay
+    if(coat>0.05){
+      const sh=ctx.createLinearGradient(gx,gy,gx,gy+wpH);
+      sh.addColorStop(0,`rgba(25,90,200,${coat*.18})`); sh.addColorStop(1,'rgba(25,90,200,0)');
+      ctx.fillStyle=sh; ctx.fillRect(gx,gy,wpW,wpH);
     }
-  }
-
-  function resize(){
-    const r=canvas.parentElement.getBoundingClientRect();
-    W=canvas.width=r.width; H=canvas.height=r.height;
-  }
-  const WPL=()=>W*.08, WPT=()=>H*.12, WPR=()=>W*.66, WPB=()=>H*.88;
-
-  function init(){
-    passY=WPT()+PASS_GAP; passDir=1; machinedY=WPT();
-    toolX=WPL()+6; toolY=passY; toolTX=WPR()-6; toolTY=passY;
-    pathPts=[]; chips=[]; initialized=true;
+    // Border
+    ctx.strokeStyle=alC(coat,.5); ctx.lineWidth=1; ctx.strokeRect(gx,gy,wpW,wpH);
   }
 
   function draw(){
     animId=requestAnimationFrame(draw); frameN++;
-    if(!initialized) init();
     ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#060E1A'; ctx.fillRect(0,0,W,H);
+    // Blueprint grid
+    ctx.strokeStyle='rgba(18,50,90,.14)'; ctx.lineWidth=.4;
+    for(let x=0;x<W;x+=22){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=22){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
 
-    // Engineering blueprint background
-    ctx.fillStyle='#070C14'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='rgba(30,70,120,.18)'; ctx.lineWidth=.5;
-    for(let x=0;x<W;x+=20){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-    for(let y=0;y<H;y+=20){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    // Axis marks
-    ctx.strokeStyle='rgba(60,130,200,.12)'; ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(WPL()-8,WPT());ctx.lineTo(WPL()-8,WPB());ctx.stroke();
-    ctx.beginPath();ctx.moveTo(WPL(),WPB()+8);ctx.lineTo(WPR(),WPB()+8);ctx.stroke();
+    const f=frameN%CYCLE;
+    const wCY=H*.46, convY=H*.76, wpW=W*.30, wpH=H*.48;
+    const sX=[W*.18, W*.50, W*.82]; // stage centers
+    // Conveyor belt
+    ctx.fillStyle='rgba(15,32,52,.7)'; ctx.fillRect(0,convY-3,W,6);
+    for(let i=0;i<14;i++){const dx=((i*70+frameN*.7)%(W+40))-20;ctx.beginPath();ctx.arc(dx,convY,2,0,Math.PI*2);ctx.fillStyle='rgba(35,75,120,.45)';ctx.fill();}
 
-    const wL=WPL(),wT=WPT(),wR=WPR(),wB=WPB(),wW=wR-wL,wH=wB-wT;
+    // Stage dividers + labels
+    const stageNames=['ROHMATERIAL', 'FRÄSEN', 'ANODISIEREN'];
+    const stageActive=[f<120, f>=90&&f<340, f>=300&&f<460];
+    stageNames.forEach((name,i)=>{
+      const a=stageActive[i];
+      ctx.strokeStyle=a?'rgba(40,140,220,.22)':'rgba(20,55,95,.12)'; ctx.lineWidth=1;
+      ctx.strokeRect(sX[i]-wpW/2-8,wCY-wpH/2-28,wpW+16,wpH+32);
+      ctx.font='bold 8px monospace'; ctx.textAlign='center';
+      ctx.fillStyle=a?'rgba(70,185,255,.8)':'rgba(50,100,160,.38)';
+      ctx.fillText(name,sX[i],wCY-wpH/2-14);
+    });
+    // Arrows between stages
+    [0,1].forEach(i=>{const mid=(sX[i]+sX[i+1])/2;ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(30,90,160,.4)';ctx.fillText('→',mid,wCY+5);});
 
-    // Unmachined aluminum surface
-    const rawG=ctx.createLinearGradient(wL,wT,wL,wB);
-    rawG.addColorStop(0,'#6E8494'); rawG.addColorStop(.5,'#8CA0AE'); rawG.addColorStop(1,'#607080');
-    ctx.fillStyle=rawG; ctx.fillRect(wL,wT,wW,wH);
-    // Brushed aluminum striation on raw area
-    for(let sy=wT+3;sy<wB;sy+=6){
-      ctx.beginPath();ctx.moveTo(wL,sy);ctx.lineTo(wR,sy);
-      ctx.strokeStyle=`rgba(255,255,255,${.03+Math.random()*.02})`;ctx.lineWidth=.5;ctx.stroke();
+    // === WORKPIECE POSITION + STATE ===
+    let cx,mill=0,coat=0;
+    if(f<50){cx=(-wpW/2)+(sX[0]+wpW/2)*eio(f/50);mill=0;coat=0;} // enter from left
+    else if(f<90){cx=sX[0];mill=0;coat=0;}                         // sit at stage 1
+    else if(f<130){cx=sX[0]+(sX[1]-sX[0])*eio((f-90)/40);mill=0;coat=0;} // move to mill
+    else if(f<300){cx=sX[1];mill=(f-130)/170;coat=0;               // MILLING
+      // Emit chips
+      if(f%5===0){const vi=Math.min(VOIDS.length-1,Math.floor(mill*VOIDS.length));const[vx,vw]=VOIDS[vi];const chX=cx-wpW/2+(vx+vw/2)*wpW+(Math.random()-.5)*8;const chY=wCY-wpH/2+(mill*VOIDS.length-vi)*wpH*(1-BASE_R);chips.push({x:chX,y:chY,vx:(Math.random()-.5)*4,vy:-2.5-Math.random()*3,life:1,sx:2+Math.random()*3.5,sy:.8+Math.random(),rot:Math.random()*Math.PI,rv:(Math.random()-.5)*.22});}
+      if(f%45===0)partCount++;
+    } else if(f<340){cx=sX[1]+(sX[2]-sX[1])*eio((f-300)/40);mill=1;coat=0;} // move to coat
+    else if(f<460){cx=sX[2];mill=1;coat=(f-340)/120;                // ANODISING
+      if(f%4===0){for(let k=0;k<3;k++){sprays.push({x:cx+(Math.random()-.5)*wpW*.8,y:wCY-wpH/2-5,vx:(Math.random()-.5)*2,vy:1.2+Math.random()*2.2,life:1,size:1.5+Math.random()*2.5,r:20+Math.random()*25,g:70+Math.random()*60,b:175+Math.random()*50});}}
+    } else {cx=sX[2]+(W*1.4-sX[2])*eio((f-460)/60);mill=1;coat=1;} // exit right
+
+    // === DRAW WORKPIECE ===
+    drawWP(cx,wCY,wpW,wpH,mill,coat);
+
+    // === MILLING CUTTER (stage 2 only) ===
+    if(f>=90&&f<340){
+      const vi=Math.min(VOIDS.length-1,Math.floor(mill*VOIDS.length));
+      const[vx,vw]=VOIDS[vi];
+      const cutX=cx-wpW/2+(vx+vw/2)*wpW;
+      const cutY=wCY-wpH/2+(mill*VOIDS.length-vi)*wpH*(1-BASE_R);
+      // Spindle rod
+      ctx.fillStyle='#151F2A'; ctx.fillRect(cutX-4,wCY-wpH/2-H*.15,8,wCY-wpH/2-cutY+H*.15);
+      // Cutter head
+      const cG=ctx.createRadialGradient(cutX-3,cutY-3,1,cutX,cutY,10);
+      cG.addColorStop(0,'#3A4E60'); cG.addColorStop(1,'#0E161E');
+      ctx.beginPath();ctx.arc(cutX,cutY,10,0,Math.PI*2);ctx.fillStyle=cG;ctx.fill();
+      ctx.strokeStyle='rgba(100,170,220,.5)';ctx.lineWidth=1;ctx.stroke();
+      for(let fl=0;fl<4;fl++){const fa=fl*Math.PI/2+frameN*.25;ctx.save();ctx.translate(cutX,cutY);ctx.rotate(fa);ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(8.5,0);ctx.strokeStyle='rgba(140,210,255,.55)';ctx.lineWidth=1.4;ctx.stroke();ctx.restore();}
+      ctx.beginPath();ctx.arc(cutX,cutY,10+Math.sin(frameN*.3)*1.5,0,Math.PI*2);ctx.strokeStyle='rgba(60,180,255,.1)';ctx.lineWidth=3;ctx.stroke();
     }
 
-    // Machined area (progressive, brighter mirror finish)
-    if(machinedY>wT){
-      const mH=Math.min(machinedY,wB)-wT;
-      const mG=ctx.createLinearGradient(wL,wT,wR,wT+mH);
-      mG.addColorStop(0,'#AABCCC'); mG.addColorStop(.25,'#D8EAF4'); mG.addColorStop(.5,'#C0D4E0'); mG.addColorStop(.75,'#B0C8D8'); mG.addColorStop(1,'#98B0C0');
-      ctx.fillStyle=mG; ctx.fillRect(wL,wT,wW,mH);
-      // Machining striae
-      for(let sy=wT+PASS_GAP;sy<Math.min(machinedY,wB);sy+=PASS_GAP){
-        ctx.beginPath();ctx.moveTo(wL,sy);ctx.lineTo(wR,sy);
-        ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=.7;ctx.stroke();
+    // === SPRAY GUN (stage 3) ===
+    if(f>=300&&f<470){
+      const gunX=cx+(Math.sin(frameN*.045)*wpW*.42);
+      const gunY=wCY-wpH/2-18;
+      ctx.fillStyle='#1A2530'; ctx.beginPath();if(ctx.roundRect)ctx.roundRect(gunX-4,gunY-20,8,18,2);else ctx.rect(gunX-4,gunY-20,8,18);ctx.fill();
+      ctx.fillStyle='#253540'; ctx.beginPath();ctx.moveTo(gunX-7,gunY-2);ctx.lineTo(gunX+7,gunY-2);ctx.lineTo(gunX+5,gunY+2);ctx.lineTo(gunX-5,gunY+2);ctx.closePath();ctx.fill();
+      // Spray cone glow
+      if(f>=340&&f<460){
+        const coneG=ctx.createRadialGradient(gunX,gunY+4,0,gunX,gunY+4,22);
+        coneG.addColorStop(0,`rgba(30,100,220,${coat*.25})`); coneG.addColorStop(1,'rgba(30,100,220,0)');
+        ctx.fillStyle=coneG; ctx.beginPath();ctx.arc(gunX,gunY+4,22,0,Math.PI*2);ctx.fill();
       }
-      // Mirror highlight band
-      const hg=ctx.createLinearGradient(wL,wT,wL+wW*.4,wT);
-      hg.addColorStop(0,'rgba(255,255,255,0)');
-      hg.addColorStop(.35,'rgba(255,255,255,0.12)');
-      hg.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=hg; ctx.fillRect(wL,wT,wW,mH);
-    }
-
-    // Workpiece border
-    ctx.strokeStyle='rgba(180,210,235,.7)';ctx.lineWidth=1.5;ctx.strokeRect(wL,wT,wW,wH);
-    ctx.fillStyle='rgba(220,245,255,.1)';ctx.fillRect(wL,wT,wW,2);ctx.fillRect(wL,wT,2,wH);
-    // Material label
-    ctx.font='bold 8px monospace';ctx.fillStyle='rgba(80,150,210,.55)';ctx.textAlign='left';
-    ctx.fillText('AL 6061-T6 · Toleranz ±0.02mm',wL+4,wB-5);
-
-    // Move tool
-    const dx=toolTX-toolX,dy=toolTY-toolY,dist=Math.sqrt(dx*dx+dy*dy),speed=1.6;
-    if(dist>speed){
-      toolX+=dx/dist*speed; toolY+=dy/dist*speed;
-      if(frameN%3===0&&toolY>=wT&&toolY<=wB&&toolX>=wL&&toolX<=wR){
-        chips.push(new Chip(toolX,toolY));
-        if(frameN%40===0) partCount++;
-      }
-    } else {
-      toolX=toolTX; toolY=toolTY;
-      machinedY=Math.max(machinedY,toolY);
-      passY+=PASS_GAP;
-      if(passY>wB-4){ passY=wT+PASS_GAP; machinedY=wT; passDir=1; toolX=wL+6; toolY=passY; partCount++; }
-      passDir*=-1;
-      toolTX=passDir>0?wR-6:wL+6; toolTY=passY;
-    }
-
-    // Tool path trail
-    pathPts.push({x:toolX,y:toolY});
-    if(pathPts.length>60) pathPts.shift();
-    if(pathPts.length>1){
-      ctx.beginPath();ctx.moveTo(pathPts[0].x,pathPts[0].y);
-      pathPts.forEach(p=>ctx.lineTo(p.x,p.y));
-      ctx.strokeStyle='rgba(80,170,255,.2)';ctx.lineWidth=1;ctx.stroke();
     }
 
     // Chips
-    for(let i=chips.length-1;i>=0;i--){ chips[i].update(); if(chips[i].life<=0)chips.splice(i,1); else chips[i].draw(); }
+    for(let i=chips.length-1;i>=0;i--){const c=chips[i];c.vy+=.08;c.x+=c.vx;c.y+=c.vy;c.vx*=.97;c.life-=.023;c.rot+=c.rv;if(c.life<=0||c.y>H){chips.splice(i,1);continue;}ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.globalAlpha=c.life*.72;const cg=ctx.createLinearGradient(-c.sx,0,c.sx,0);cg.addColorStop(0,'#7A9AAC');cg.addColorStop(.5,'#C8DCEC');cg.addColorStop(1,'#8AAABB');ctx.beginPath();ctx.ellipse(0,0,c.sx,c.sy,0,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();ctx.globalAlpha=1;ctx.restore();}
+    // Sprays
+    for(let i=sprays.length-1;i>=0;i--){const s=sprays[i];s.vy+=.06;s.x+=s.vx;s.y+=s.vy;s.life-=.04;if(s.life<=0||s.y>wCY+wpH/2){sprays.splice(i,1);continue;}ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fillStyle=`rgba(${s.r},${s.g},${s.b},${s.life*.65})`;ctx.fill();}
 
-    // Milling cutter
-    ctx.beginPath();ctx.arc(toolX+2,toolY+2,TOOL_R,0,Math.PI*2);
-    ctx.fillStyle='rgba(0,0,0,.35)';ctx.fill();
-    const tG=ctx.createRadialGradient(toolX-3,toolY-3,1,toolX,toolY,TOOL_R);
-    tG.addColorStop(0,'#3A4A58');tG.addColorStop(1,'#101820');
-    ctx.beginPath();ctx.arc(toolX,toolY,TOOL_R,0,Math.PI*2);
-    ctx.fillStyle=tG;ctx.fill();
-    ctx.strokeStyle='rgba(120,180,220,.5)';ctx.lineWidth=1;ctx.stroke();
-    // Flutes
-    const fr=frameN*.22;
-    for(let f=0;f<FLUTES;f++){
-      const fa=fr+f*Math.PI/2;
-      ctx.save();ctx.translate(toolX,toolY);ctx.rotate(fa);
-      ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(TOOL_R*.85,0);
-      ctx.strokeStyle='rgba(160,210,255,.55)';ctx.lineWidth=1.4;ctx.stroke();
-      ctx.restore();
-    }
-    ctx.beginPath();ctx.arc(toolX,toolY,2.2,0,Math.PI*2);
-    ctx.fillStyle='rgba(200,235,255,.9)';ctx.fill();
-    // Cutting glow
-    ctx.beginPath();ctx.arc(toolX,toolY,TOOL_R+2+Math.sin(frameN*.25)*.8,0,Math.PI*2);
-    ctx.strokeStyle='rgba(80,190,255,.12)';ctx.lineWidth=2.5;ctx.stroke();
-
-    // HUD panel
-    rpmVis+=(14500-rpmVis)*.04;
-    const hx=WPR()+14, hy=WPT();
-    const hudW=W-hx-6;
-    const hud=[
-      {k:'SPINDEL',v:Math.round(rpmVis).toLocaleString('de-DE')+' rpm',c:'#60C8FF'},
-      {k:'VORSCHUB',v:'640 mm/min',c:'#60C8FF'},
-      {k:'ZUSTELLUNG',v:'0.4 mm',c:'#60C8FF'},
-      {k:'WERKZEUG',v:'VHM Ø24',c:'#A8D8FF'},
-      {k:'RAUHEIT Ra',v:'0.6 μm',c:'#50FFB0'},
-      {k:'TOLERANZ',v:'±0.02 mm',c:'#50FFB0'},
-      {k:'STATUS',v:'IN SPEC ✓',c:'#50FFB0'},
-    ];
-    hud.forEach((item,i)=>{
-      const y=hy+i*26;
-      ctx.fillStyle='rgba(0,20,45,.65)';
-      ctx.beginPath();if(ctx.roundRect)ctx.roundRect(hx,y,hudW,20,3);else ctx.rect(hx,y,hudW,20);ctx.fill();
-      ctx.fillStyle='rgba(40,100,180,.5)';ctx.fillRect(hx,y,2.5,20);
-      ctx.font='bold 8px monospace';ctx.textAlign='left';
-      ctx.fillStyle='rgba(90,150,200,.55)';ctx.fillText(item.k,hx+7,y+13);
-      ctx.fillStyle=item.c;ctx.textAlign='right';ctx.fillText(item.v,hx+hudW-5,y+13);
-    });
+    // HUD status
+    const stage=f<90?'ROHMATERIAL':f<130?'TRANSPORT':f<300?'FRÄSEN':f<340?'TRANSPORT':f<460?'ANODISIEREN':'TRANSPORT';
+    ctx.font='bold 7.5px monospace'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(60,180,255,.6)'; ctx.fillText('◈ '+stage,8,14);
+    if(f>=130&&f<300){ctx.fillStyle='rgba(60,180,255,.45)';ctx.fillText(`FRÄSFORTSCHRITT: ${Math.round(mill*100)}%`,8,28);}
+    if(f>=340&&f<460){ctx.fillStyle='rgba(50,140,255,.45)';ctx.fillText(`ANODISIERUNG: ${Math.round(coat*100)}%`,8,28);}
 
     const el=document.getElementById('metall-counter');
-    if(el) el.textContent='Teile gefräst: '+partCount.toLocaleString('de-DE');
+    if(el) el.textContent='Teile verarbeitet: '+partCount.toLocaleString('de-DE');
   }
 
-  function start(){ if(!active){active=true;initialized=false;chips=[];pathPts=[];resize();draw();} }
-  function stop(){ if(animId){cancelAnimationFrame(animId);animId=null;active=false;} }
-  const obs=new IntersectionObserver(e=>{ e[0].isIntersecting?start():stop(); },{threshold:0.1});
+  function start(){if(!active){active=true;chips.length=0;sprays.length=0;resize();draw();}}
+  function stop(){if(animId){cancelAnimationFrame(animId);animId=null;active=false;}}
+  const obs=new IntersectionObserver(e=>{e[0].isIntersecting?start():stop();},{threshold:0.1});
   obs.observe(canvas.parentElement);
-  window.addEventListener('resize',()=>{ if(active){resize();initialized=false;pathPts=[];chips=[];} },{passive:true});
+  window.addEventListener('resize',()=>{if(active)resize();},{passive:true});
 })();
 
 // ── 9. LOGISTIK EUROPE MAP ───────────────────
@@ -978,69 +952,89 @@ function startTypewriter(){
   const ctx = canvas.getContext('2d');
   let W, H, animId=null, active=false, shipCount=0, frameN=0;
 
-  // Simplified Europe outline (clockwise, normalized 0..1)
-  // Covers W Europe, Scandinavia, Eastern Europe, Mediterranean
+  // Europe outline — lat/lon converted to normalized coords
+  // x = (lon + 10) / 52   [range: -10°W → 42°E]
+  // y = (71 - lat) / 36   [range: 71°N → 35°N]
   const europeOutline = [
-    {x:.39,y:.01},  // North Norway
-    {x:.52,y:.04},  // Norway-Russia border
-    {x:.64,y:.08},  // Finland N
-    {x:.70,y:.16},  // Gulf of Finland
-    {x:.67,y:.24},  // Estonia/Latvia coast
-    {x:.62,y:.30},  // Lithuania / Poland coast
-    {x:.52,y:.31},  // Poland-Germany coast
-    {x:.47,y:.33},  // Germany NE coast
-    {x:.44,y:.29},  // Denmark (Jutland)
-    {x:.41,y:.33},  // Denmark south
-    {x:.37,y:.35},  // Netherlands
-    {x:.31,y:.41},  // Belgium / N France
-    {x:.22,y:.44},  // Brittany
-    {x:.19,y:.52},  // France W coast
-    {x:.19,y:.62},  // Bay of Biscay
-    {x:.13,y:.68},  // N Portugal / Galicia
-    {x:.10,y:.76},  // Portugal SW
-    {x:.14,y:.85},  // Spain S
-    {x:.23,y:.87},  // Gibraltar
-    {x:.32,y:.81},  // Spain E coast
-    {x:.37,y:.77},  // French Riviera
-    {x:.42,y:.73},  // Italy NW (Genoa)
-    {x:.43,y:.83},  // Italy W coast
-    {x:.47,y:.91},  // Italy toe
-    {x:.52,y:.87},  // Italy heel (Puglia)
-    {x:.50,y:.76},  // Adriatic coast
-    {x:.54,y:.79},  // Croatia / Albania
-    {x:.57,y:.88},  // Greece W
-    {x:.60,y:.94},  // Greece S (Cape Matapan)
-    {x:.62,y:.87},  // Greece NE
-    {x:.65,y:.80},  // Turkey W coast
-    {x:.67,y:.72},  // Turkey NW / Bulgaria
-    {x:.69,y:.63},  // Romania / Black Sea
-    {x:.74,y:.56},  // Ukraine coast
-    {x:.82,y:.44},  // Russia S
-    {x:.84,y:.34},  // Russia central
-    {x:.78,y:.24},  // St. Petersburg area
-    {x:.72,y:.14},  // Finland E coast
-    {x:.62,y:.06},  // Norway-Russia E
-    {x:.39,y:.01},  // Close
+    // North Norway tip
+    {x:.688,y:.000},
+    // NE Norway → Russia border
+    {x:.731,y:.014},{x:.750,y:.028},
+    // Kola Peninsula
+    {x:.769,y:.056},{x:.762,y:.083},
+    // Finland-Russia border (interior, simplified)
+    {x:.731,y:.139},{x:.712,y:.194},
+    // Gulf of Finland — Helsinki
+    {x:.673,y:.306},
+    // Baltic States: Tallinn → Riga → Klaipeda
+    {x:.667,y:.319},{x:.656,y:.392},{x:.598,y:.425},
+    // Kaliningrad → Gdansk
+    {x:.575,y:.453},{x:.550,y:.464},
+    // Poland-Germany coast → Rügen
+    {x:.471,y:.472},{x:.454,y:.458},
+    // Germany north coast west → Cuxhaven
+    {x:.390,y:.469},{x:.360,y:.475},
+    // Jutland W coast up → Skagen → E coast back down
+    {x:.354,y:.431},{x:.396,y:.369},{x:.408,y:.408},{x:.375,y:.450},
+    // Netherlands → Belgium
+    {x:.285,y:.503},{x:.271,y:.528},
+    // N France coast → Le Havre → Cherbourg
+    {x:.229,y:.558},{x:.194,y:.597},{x:.162,y:.594},
+    // Brittany → Brest → Penmarc'h
+    {x:.106,y:.628},{x:.112,y:.644},
+    // W France → La Rochelle → Bordeaux → Biarritz
+    {x:.150,y:.667},{x:.169,y:.692},{x:.162,y:.731},{x:.162,y:.764},
+    // Cabo Ortegal (NW Spain) → Cape Finisterre
+    {x:.040,y:.756},{x:.013,y:.781},
+    // Portugal: Lisbon → Cape St Vincent
+    {x:.015,y:.897},{x:.019,y:.944},
+    // Spain S: Gibraltar → Almeria
+    {x:.088,y:.969},{x:.144,y:.950},
+    // E Spain → Barcelona → Marseille → Genoa
+    {x:.235,y:.822},{x:.296,y:.769},{x:.363,y:.736},
+    // Italy W coast → Naples
+    {x:.427,y:.811},{x:.467,y:.839},
+    // Italy toe (Reggio)
+    {x:.494,y:.914},
+    // Italy heel (Taranto/Puglia)
+    {x:.523,y:.847},{x:.517,y:.831},
+    // Ancona → Venice/Trieste
+    {x:.452,y:.761},{x:.458,y:.706},
+    // Croatia → Dubrovnik → Albania
+    {x:.508,y:.764},{x:.540,y:.786},{x:.565,y:.828},
+    // Greece: Patras → Cape Matapan → Athens
+    {x:.610,y:.911},{x:.625,y:.961},{x:.648,y:.919},
+    // Thessaloniki → Dardanelles → Istanbul
+    {x:.633,y:.847},{x:.679,y:.836},{x:.750,y:.833},
+    // Bulgaria (Varna) → Romania (Constanța) → Ukraine (Odessa)
+    {x:.729,y:.772},{x:.744,y:.747},{x:.783,y:.681},
+    // Russia east (Rostov-on-Don) → NW Russia
+    {x:.956,y:.661},{x:.975,y:.589},{x:.958,y:.456},{x:.919,y:.367},
+    // St. Petersburg → Finland W coast → Finland NE
+    {x:.775,y:.303},{x:.619,y:.347},{x:.600,y:.278},{x:.648,y:.194},
+    // Close at North Cape
+    {x:.688,y:.000},
   ];
 
-  // Major European logistics hubs
+  // Major European logistics hubs — coords match outline coordinate system
+  // x=(lon+10)/52, y=(71-lat)/36
   const cities = {
-    Hamburg:    {x:.44,y:.32,l:'HH',  clr:'#3B82F6'},
-    Berlin:     {x:.54,y:.33,l:'B',   clr:'#3B82F6'},
-    Frankfurt:  {x:.42,y:.44,l:'F',   clr:'#F59E0B'},
-    München:    {x:.48,y:.53,l:'M',   clr:'#3B82F6'},
-    Wien:       {x:.57,y:.52,l:'W',   clr:'#10B981'},
-    Zürich:     {x:.41,y:.53,l:'ZH',  clr:'#10B981'},
-    Paris:      {x:.28,y:.49,l:'PAR', clr:'#F43F5E'},
-    Amsterdam:  {x:.33,y:.36,l:'AMS', clr:'#3B82F6'},
-    Brüssel:    {x:.32,y:.42,l:'BRU', clr:'#F43F5E'},
-    Warschau:   {x:.61,y:.37,l:'WAW', clr:'#A78BFA'},
-    Prag:       {x:.52,y:.40,l:'PRG', clr:'#A78BFA'},
-    Budapest:   {x:.58,y:.50,l:'BUD', clr:'#A78BFA'},
-    Mailand:    {x:.41,y:.64,l:'MIL', clr:'#10B981'},
-    Madrid:     {x:.21,y:.72,l:'MAD', clr:'#F43F5E'},
-    Stockholm:  {x:.54,y:.19,l:'STO', clr:'#60C0FF'},
-    Kopenhagen: {x:.46,y:.27,l:'CPH', clr:'#60C0FF'},
+    Hamburg:    {x:.385,y:.486,l:'HH',  clr:'#3B82F6'},
+    Berlin:     {x:.450,y:.514,l:'B',   clr:'#3B82F6'},
+    Frankfurt:  {x:.360,y:.581,l:'F',   clr:'#F59E0B'},
+    München:    {x:.415,y:.636,l:'M',   clr:'#3B82F6'},
+    Wien:       {x:.508,y:.633,l:'W',   clr:'#10B981'},
+    Zürich:     {x:.356,y:.656,l:'ZH',  clr:'#10B981'},
+    Paris:      {x:.237,y:.614,l:'PAR', clr:'#F43F5E'},
+    Amsterdam:  {x:.287,y:.517,l:'AMS', clr:'#3B82F6'},
+    Brüssel:    {x:.277,y:.561,l:'BRU', clr:'#F43F5E'},
+    Warschau:   {x:.596,y:.522,l:'WAW', clr:'#A78BFA'},
+    Prag:       {x:.469,y:.581,l:'PRG', clr:'#A78BFA'},
+    Budapest:   {x:.560,y:.653,l:'BUD', clr:'#A78BFA'},
+    Mailand:    {x:.369,y:.708,l:'MIL', clr:'#10B981'},
+    Madrid:     {x:.121,y:.850,l:'MAD', clr:'#F43F5E'},
+    Stockholm:  {x:.540,y:.325,l:'STO', clr:'#60C0FF'},
+    Kopenhagen: {x:.435,y:.425,l:'CPH', clr:'#60C0FF'},
   };
 
   const routes = [
