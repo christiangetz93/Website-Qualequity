@@ -299,9 +299,10 @@ footer{background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.06);padd
         </div>
         <div class="ind-body">
           <div class="ind-title">Metallverarbeitung</div>
-          <div class="ind-sub">Präzision messbar machen. Von der Schweißnaht bis zum Qualitätsregelkreis — ISO 9001 &amp; 50001 schonen Ressourcen und senken Ausschuss messbar.</div>
+          <div class="ind-sub">Präzision messbar machen. Von der Schweißnaht bis zum Qualitätsregelkreis — ISO 9001, 14001 &amp; 50001 senken Ausschuss, Energieverbrauch und Umweltlast messbar.</div>
           <div class="ind-tags">
             <span class="ind-tag">ISO 9001</span>
+            <span class="ind-tag">ISO 14001</span>
             <span class="ind-tag">ISO 50001</span>
             <span class="ind-tag">Energieeffizienz</span>
             <span class="ind-tag">Ausschussreduktion</span>
@@ -668,7 +669,7 @@ function startTypewriter(){
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   let W, H, animId = null, active = false;
-  let passengerCount = 0;
+  let passengerCount = 0, fracPassenger = 0;
 
   const lines = [
     { id:'U1', color:'#3B82F6', stops:[{x:.08,y:.22},{x:.28,y:.28},{x:.5,y:.45},{x:.72,y:.52},{x:.92,y:.58}] },
@@ -749,8 +750,8 @@ function startTypewriter(){
         if(train.dwellTime === 0) train.atStop = false;
       } else {
         train.t += 0.0035 * train.dir;
-        if(train.t >= 1) { train.t = 1; train.dir = -1; train.dwellTime = 30; passengerCount += Math.floor(Math.random()*80+20); }
-        if(train.t <= 0) { train.t = 0; train.dir = 1; train.dwellTime = 30; passengerCount += Math.floor(Math.random()*80+20); }
+        if(train.t >= 1) { train.t = 1; train.dir = -1; train.dwellTime = 30; }
+        if(train.t <= 0) { train.t = 0; train.dir = 1; train.dwellTime = 30; }
       }
 
       const pos = getPos(train.line.stops, train.t, W, H);
@@ -775,7 +776,9 @@ function startTypewriter(){
       ctx.restore();
     });
 
-    // Passenger counter
+    // Passenger counter — 750,000 per 24h at 60fps
+    fracPassenger += 750000 / (24 * 3600 * 60);
+    passengerCount = Math.floor(fracPassenger);
     const el = document.getElementById('oepnv-counter');
     if(el) el.textContent = 'Passagiere heute: ' + passengerCount.toLocaleString('de-DE');
   }
@@ -793,7 +796,9 @@ function startTypewriter(){
   const canvas = document.getElementById('canvas-metall');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W, H, animId=null, active=false, frameN=0, partCount=0;
+  let W, H, animId=null, active=false, frameN=0;
+  // Year-to-date start: 162/365 × 18.5M; rate: 18.5M / (365×24×3600×60fps)
+  let fracPart = Math.round(162/365 * 18500000);
   const chips=[], sprays=[];
 
   // === PROFILE: 6 fins + base (normalized 0-1 within workpiece) ===
@@ -811,37 +816,78 @@ function startTypewriter(){
   function alDk(t,alpha=1){const r=Math.round(85+(15-85)*t),g=Math.round(105+(52-105)*t),b=Math.round(125+(160-125)*t);return`rgba(${r},${g},${b},${alpha})`;}
   function alBr(t,alpha=1){const r=Math.round(215+(60-215)*t),g=Math.round(232+(140-232)*t),b=Math.round(248+(255-248)*t);return`rgba(${r},${g},${b},${alpha})`;}
 
-  // Draw aluminum workpiece profile
+  // Draw aluminum workpiece with 3D depth
   function drawWP(cx,cy,wpW,wpH,mill,coat){
     const gx=cx-wpW/2, gy=cy-wpH/2;
     const voidH=wpH*(1-BASE_R);
-    // Main block fill
+    const dX=10, dY=-8; // 3D depth offset
+
+    // Right face (3D side)
+    ctx.beginPath();
+    ctx.moveTo(gx+wpW,gy); ctx.lineTo(gx+wpW+dX,gy+dY);
+    ctx.lineTo(gx+wpW+dX,gy+wpH+dY); ctx.lineTo(gx+wpW,gy+wpH);
+    ctx.closePath();
+    const rG=ctx.createLinearGradient(gx+wpW,0,gx+wpW+dX,0);
+    rG.addColorStop(0,alDk(coat,.95)); rG.addColorStop(1,alDk(coat,.55));
+    ctx.fillStyle=rG; ctx.fill();
+    ctx.strokeStyle=alDk(coat,.6); ctx.lineWidth=.7; ctx.stroke();
+
+    // Top face (3D top)
+    ctx.beginPath();
+    ctx.moveTo(gx,gy); ctx.lineTo(gx+wpW,gy);
+    ctx.lineTo(gx+wpW+dX,gy+dY); ctx.lineTo(gx+dX,gy+dY);
+    ctx.closePath();
+    const tG=ctx.createLinearGradient(gx,gy,gx+wpW,gy);
+    tG.addColorStop(0,alBr(coat,.75)); tG.addColorStop(.5,alBr(coat,.95)); tG.addColorStop(1,alC(coat,.7));
+    ctx.fillStyle=tG; ctx.fill();
+    ctx.strokeStyle=alBr(coat,.5); ctx.lineWidth=.7; ctx.stroke();
+
+    // Main front face
     const mg=ctx.createLinearGradient(gx,gy,gx+wpW,gy+wpH);
-    mg.addColorStop(0,alDk(coat)); mg.addColorStop(.35,alC(coat)); mg.addColorStop(.65,alBr(coat,.9)); mg.addColorStop(1,alDk(coat));
+    mg.addColorStop(0,alDk(coat)); mg.addColorStop(.2,alC(coat));
+    mg.addColorStop(.5,alBr(coat,.95)); mg.addColorStop(.8,alC(coat));
+    mg.addColorStop(1,alDk(coat));
     ctx.fillStyle=mg; ctx.fillRect(gx,gy,wpW,wpH);
+
+    // Metallic sheen band
+    const sh2=ctx.createLinearGradient(gx,gy,gx+wpW*.4,gy);
+    sh2.addColorStop(0,'rgba(255,255,255,0)'); sh2.addColorStop(.3,`rgba(255,255,255,${.08+coat*.04})`); sh2.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sh2; ctx.fillRect(gx,gy,wpW,wpH);
+
     // Mill-out voids progressively
     if(mill>0){
       VOIDS.forEach(([vx,vw],vi)=>{
         const cut=Math.min(1,Math.max(0,mill*VOIDS.length-vi));
         if(cut>0){
-          ctx.fillStyle='#06101E'; ctx.fillRect(gx+vx*wpW,gy,vw*wpW,voidH*cut);
-          // Wall sheen
-          ctx.fillStyle=alC(coat,.18);
-          ctx.fillRect(gx+vx*wpW,gy,1.5,voidH*cut);
-          ctx.fillRect(gx+(vx+vw)*wpW-1.5,gy,1.5,voidH*cut);
+          // void interior
+          ctx.fillStyle='#050D18'; ctx.fillRect(gx+vx*wpW,gy,vw*wpW,voidH*cut);
+          // inner shadow
+          const vg=ctx.createLinearGradient(gx+vx*wpW,gy,gx+(vx+vw)*wpW,gy);
+          vg.addColorStop(0,'rgba(0,0,0,.6)'); vg.addColorStop(.25,'rgba(0,0,0,0)'); vg.addColorStop(.75,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.55)');
+          ctx.fillStyle=vg; ctx.fillRect(gx+vx*wpW,gy,vw*wpW,voidH*cut);
+          // Freshly machined wall highlights
+          ctx.fillStyle=alBr(coat,.35);
+          ctx.fillRect(gx+vx*wpW,gy,1.8,voidH*cut);
+          ctx.fillRect(gx+(vx+vw)*wpW-1.8,gy,1.8,voidH*cut);
         }
       });
     }
-    // Top highlight
-    ctx.fillStyle=alBr(coat,.6); ctx.fillRect(gx,gy,wpW,2);
-    // Anodized sheen overlay
+
+    // Anodized color overlay
     if(coat>0.05){
-      const sh=ctx.createLinearGradient(gx,gy,gx,gy+wpH);
-      sh.addColorStop(0,`rgba(25,90,200,${coat*.18})`); sh.addColorStop(1,'rgba(25,90,200,0)');
-      ctx.fillStyle=sh; ctx.fillRect(gx,gy,wpW,wpH);
+      const ao=ctx.createLinearGradient(gx,gy,gx,gy+wpH);
+      ao.addColorStop(0,`rgba(15,80,200,${coat*.22})`); ao.addColorStop(.6,`rgba(10,50,160,${coat*.12})`); ao.addColorStop(1,'rgba(10,50,160,0)');
+      ctx.fillStyle=ao; ctx.fillRect(gx,gy,wpW,wpH);
+      // Iridescent band
+      const ir=ctx.createLinearGradient(gx,gy,gx+wpW,gy+wpH);
+      ir.addColorStop(0,`rgba(100,200,255,${coat*.08})`); ir.addColorStop(.5,`rgba(200,100,255,${coat*.05})`); ir.addColorStop(1,`rgba(100,200,255,${coat*.08})`);
+      ctx.fillStyle=ir; ctx.fillRect(gx,gy,wpW,wpH);
     }
-    // Border
-    ctx.strokeStyle=alC(coat,.5); ctx.lineWidth=1; ctx.strokeRect(gx,gy,wpW,wpH);
+
+    // Front face border
+    ctx.strokeStyle=alC(coat,.55); ctx.lineWidth=1; ctx.strokeRect(gx,gy,wpW,wpH);
+    // Top edge bright line
+    ctx.fillStyle=alBr(coat,.8); ctx.fillRect(gx,gy,wpW,1.5);
   }
 
   function draw(){
@@ -856,23 +902,49 @@ function startTypewriter(){
     const f=frameN%CYCLE;
     const wCY=H*.46, convY=H*.76, wpW=W*.30, wpH=H*.48;
     const sX=[W*.18, W*.50, W*.82]; // stage centers
-    // Conveyor belt
-    ctx.fillStyle='rgba(15,32,52,.7)'; ctx.fillRect(0,convY-3,W,6);
-    for(let i=0;i<14;i++){const dx=((i*70+frameN*.7)%(W+40))-20;ctx.beginPath();ctx.arc(dx,convY,2,0,Math.PI*2);ctx.fillStyle='rgba(35,75,120,.45)';ctx.fill();}
+    // Conveyor belt (two rails + moving slats)
+    ctx.fillStyle='rgba(8,20,38,.85)'; ctx.fillRect(0,convY-5,W,10);
+    ctx.fillStyle='rgba(30,70,120,.5)'; ctx.fillRect(0,convY-5,W,2); ctx.fillRect(0,convY+3,W,2);
+    for(let i=0;i<20;i++){const dx=((i*55+frameN*.8)%(W+40))-20;ctx.fillStyle='rgba(40,90,150,.35)';ctx.fillRect(dx-1,convY-4,3,8);}
 
-    // Stage dividers + labels
-    const stageNames=['ROHMATERIAL', 'FRÄSEN', 'ANODISIEREN'];
+    // Stage panels + labels + ISO badges
+    const stageNames=['ROHMATERIAL','FRÄSEN','ANODISIEREN'];
+    const stageColors=['rgba(140,180,220','rgba(60,160,255','rgba(30,140,255'];
+    const stageNorms=[null,['ISO 9001','#3B82F6','ISO 50001','#F59E0B'],['ISO 14001','#10B981','ISO 9001','#3B82F6']];
     const stageActive=[f<120, f>=90&&f<340, f>=300&&f<460];
+    const panX=i=>sX[i]-wpW/2-10, panY=wCY-wpH/2-32, panW=wpW+20, panH=wpH+50;
     stageNames.forEach((name,i)=>{
       const a=stageActive[i];
-      ctx.strokeStyle=a?'rgba(40,140,220,.22)':'rgba(20,55,95,.12)'; ctx.lineWidth=1;
-      ctx.strokeRect(sX[i]-wpW/2-8,wCY-wpH/2-28,wpW+16,wpH+32);
-      ctx.font='bold 8px monospace'; ctx.textAlign='center';
-      ctx.fillStyle=a?'rgba(70,185,255,.8)':'rgba(50,100,160,.38)';
-      ctx.fillText(name,sX[i],wCY-wpH/2-14);
+      const bx=panX(i), by=panY;
+      // Panel background
+      ctx.fillStyle=a?`${stageColors[i]},.07)`:'rgba(8,22,42,.05)';
+      if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,panW,panH,5);ctx.fill();}else{ctx.fillRect(bx,by,panW,panH);}
+      // Panel border
+      ctx.strokeStyle=a?`${stageColors[i]},.35)`:'rgba(15,50,90,.15)';
+      ctx.lineWidth=a?1.2:.6;
+      if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,panW,panH,5);ctx.stroke();}else{ctx.strokeRect(bx,by,panW,panH);}
+      // Top accent bar
+      if(a){ctx.fillStyle=`${stageColors[i]},.55)`;ctx.fillRect(bx,by,panW,2);}
+      // Stage label
+      ctx.font=`bold ${a?9:7.5}px monospace`; ctx.textAlign='center';
+      ctx.fillStyle=a?`${stageColors[i]},.9)`:'rgba(40,85,140,.35)';
+      ctx.fillText(name,sX[i],by+14);
+      // ISO norm badges when active
+      if(a&&stageNorms[i]){
+        const n=stageNorms[i];
+        const badgeY=by+panH-14;
+        [-1,1].forEach((side,j)=>{
+          const bw=42, bh=11, bcx=sX[i]+side*24;
+          ctx.fillStyle=n[j*2+1]+'28';
+          if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bcx-bw/2,badgeY-bh/2,bw,bh,3);ctx.fill();}else{ctx.fillRect(bcx-bw/2,badgeY-bh/2,bw,bh);}
+          ctx.font='bold 5.5px monospace'; ctx.textAlign='center';
+          ctx.fillStyle=n[j*2+1];
+          ctx.fillText(n[j*2],bcx,badgeY+2);
+        });
+      }
     });
     // Arrows between stages
-    [0,1].forEach(i=>{const mid=(sX[i]+sX[i+1])/2;ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(30,90,160,.4)';ctx.fillText('→',mid,wCY+5);});
+    [0,1].forEach(i=>{const mid=(sX[i]+sX[i+1])/2;ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(40,110,200,.35)';ctx.fillText('›',mid,wCY+6);});
 
     // === WORKPIECE POSITION + STATE ===
     let cx,mill=0,coat=0;
@@ -882,7 +954,7 @@ function startTypewriter(){
     else if(f<300){cx=sX[1];mill=(f-130)/170;coat=0;               // MILLING
       // Emit chips
       if(f%5===0){const vi=Math.min(VOIDS.length-1,Math.floor(mill*VOIDS.length));const[vx,vw]=VOIDS[vi];const chX=cx-wpW/2+(vx+vw/2)*wpW+(Math.random()-.5)*8;const chY=wCY-wpH/2+(mill*VOIDS.length-vi)*wpH*(1-BASE_R);chips.push({x:chX,y:chY,vx:(Math.random()-.5)*4,vy:-2.5-Math.random()*3,life:1,sx:2+Math.random()*3.5,sy:.8+Math.random(),rot:Math.random()*Math.PI,rv:(Math.random()-.5)*.22});}
-      if(f%45===0)partCount++;
+      fracPart += 18500000 / (365 * 24 * 3600 * 60);
     } else if(f<340){cx=sX[1]+(sX[2]-sX[1])*eio((f-300)/40);mill=1;coat=0;} // move to coat
     else if(f<460){cx=sX[2];mill=1;coat=(f-340)/120;                // ANODISING
       if(f%4===0){for(let k=0;k<3;k++){sprays.push({x:cx+(Math.random()-.5)*wpW*.8,y:wCY-wpH/2-5,vx:(Math.random()-.5)*2,vy:1.2+Math.random()*2.2,life:1,size:1.5+Math.random()*2.5,r:20+Math.random()*25,g:70+Math.random()*60,b:175+Math.random()*50});}}
@@ -935,7 +1007,7 @@ function startTypewriter(){
     if(f>=340&&f<460){ctx.fillStyle='rgba(50,140,255,.45)';ctx.fillText(`ANODISIERUNG: ${Math.round(coat*100)}%`,8,28);}
 
     const el=document.getElementById('metall-counter');
-    if(el) el.textContent='Teile verarbeitet: '+partCount.toLocaleString('de-DE');
+    if(el) el.textContent='Teile verarbeitet: '+Math.floor(fracPart).toLocaleString('de-DE');
   }
 
   function start(){if(!active){active=true;chips.length=0;sprays.length=0;resize();draw();}}
@@ -950,7 +1022,9 @@ function startTypewriter(){
   const canvas = document.getElementById('canvas-logistik');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W, H, animId=null, active=false, shipCount=0, frameN=0;
+  let W, H, animId=null, active=false, frameN=0;
+  // Year-to-date start: 162/365 × 32.5M; rate: 32.5M / (365×24×3600×60fps)
+  let fracShip = Math.round(162/365 * 32500000);
 
   // Europe outline — lat/lon converted to normalized coords
   // x = (lon + 10) / 52   [range: -10°W → 42°E]
@@ -1055,9 +1129,6 @@ function startTypewriter(){
     const flip=Math.random()>.5;
     const from=cities[flip?r[1]:r[0]], to=cities[flip?r[0]:r[1]];
     pkgs.push({ from, to, t:0, speed:.003+Math.random()*.003, color:from.clr, size:4+Math.random()*2.5 });
-    shipCount++;
-    const el=document.getElementById('logistik-counter');
-    if(el) el.textContent='Sendungen: '+shipCount.toLocaleString('de-DE');
   }
   for(let i=0;i<10;i++) setTimeout(spawnPkg,i*200);
 
@@ -1140,6 +1211,11 @@ function startTypewriter(){
       ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.35);
       ctx.restore();
     }
+
+    // Shipment counter — 32.5M per year at 60fps
+    fracShip += 32500000 / (365 * 24 * 3600 * 60);
+    const sc=document.getElementById('logistik-counter');
+    if(sc) sc.textContent='Sendungen: '+Math.floor(fracShip).toLocaleString('de-DE');
   }
 
   function start(){ if(!active){active=true;resize();draw();} }
