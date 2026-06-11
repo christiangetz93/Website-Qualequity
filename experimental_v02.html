@@ -1090,36 +1090,41 @@ function startTypewriter(){
     {x:.688,y:.000},
   ];
 
-  // Major European logistics hubs — coords match outline coordinate system
-  // x=(lon+10)/52, y=(71-lat)/36
+  // Central Europe logistics hubs — coords: x=(lon+10)/52, y=(71-lat)/36
   const cities = {
     Hamburg:    {x:.385,y:.486,l:'HH',  clr:'#3B82F6'},
     Berlin:     {x:.450,y:.514,l:'B',   clr:'#3B82F6'},
     Frankfurt:  {x:.360,y:.581,l:'F',   clr:'#F59E0B'},
+    Köln:       {x:.326,y:.557,l:'K',   clr:'#F59E0B'},
     München:    {x:.415,y:.636,l:'M',   clr:'#3B82F6'},
+    Stuttgart:  {x:.369,y:.617,l:'STR', clr:'#3B82F6'},
     Wien:       {x:.508,y:.633,l:'W',   clr:'#10B981'},
     Zürich:     {x:.356,y:.656,l:'ZH',  clr:'#10B981'},
     Paris:      {x:.237,y:.614,l:'PAR', clr:'#F43F5E'},
+    Lyon:       {x:.285,y:.701,l:'LYN', clr:'#F43F5E'},
     Amsterdam:  {x:.287,y:.517,l:'AMS', clr:'#3B82F6'},
     Brüssel:    {x:.277,y:.561,l:'BRU', clr:'#F43F5E'},
     Warschau:   {x:.596,y:.522,l:'WAW', clr:'#A78BFA'},
+    Dresden:    {x:.457,y:.554,l:'DD',  clr:'#A78BFA'},
     Prag:       {x:.469,y:.581,l:'PRG', clr:'#A78BFA'},
     Budapest:   {x:.560,y:.653,l:'BUD', clr:'#A78BFA'},
     Mailand:    {x:.369,y:.708,l:'MIL', clr:'#10B981'},
-    Madrid:     {x:.121,y:.850,l:'MAD', clr:'#F43F5E'},
     Stockholm:  {x:.540,y:.325,l:'STO', clr:'#60C0FF'},
     Kopenhagen: {x:.435,y:.425,l:'CPH', clr:'#60C0FF'},
   };
 
   const routes = [
-    ['Hamburg','Amsterdam'],['Hamburg','Berlin'],['Hamburg','Kopenhagen'],
-    ['Berlin','Warschau'],['Berlin','Prag'],['Berlin','Frankfurt'],
-    ['Frankfurt','Paris'],['Frankfurt','Brüssel'],['Frankfurt','München'],['Frankfurt','Prag'],
-    ['München','Wien'],['München','Zürich'],['München','Mailand'],
-    ['Wien','Budapest'],['Wien','Prag'],
-    ['Paris','Brüssel'],['Paris','Madrid'],['Paris','Mailand'],
+    ['Hamburg','Amsterdam'],['Hamburg','Berlin'],['Hamburg','Kopenhagen'],['Hamburg','Köln'],
+    ['Berlin','Warschau'],['Berlin','Prag'],['Berlin','Frankfurt'],['Berlin','Dresden'],
+    ['Frankfurt','Paris'],['Frankfurt','Brüssel'],['Frankfurt','München'],['Frankfurt','Köln'],['Frankfurt','Stuttgart'],
+    ['Köln','Amsterdam'],['Köln','Brüssel'],
+    ['München','Wien'],['München','Zürich'],['München','Mailand'],['München','Stuttgart'],
+    ['Stuttgart','Lyon'],['Stuttgart','Zürich'],
+    ['Wien','Budapest'],['Wien','Prag'],['Wien','Dresden'],
+    ['Paris','Brüssel'],['Paris','Lyon'],
+    ['Lyon','Mailand'],['Lyon','Zürich'],
     ['Stockholm','Kopenhagen'],['Kopenhagen','Hamburg'],
-    ['Brüssel','Amsterdam'],['Warschau','Budapest'],['Zürich','Mailand'],
+    ['Warschau','Budapest'],['Warschau','Dresden'],['Prag','Dresden'],
   ];
 
   const pkgs = [];
@@ -1141,9 +1146,10 @@ function startTypewriter(){
     animId=requestAnimationFrame(draw); frameN++;
     ctx.clearRect(0,0,W,H);
 
-    // Map margins — slight left padding, full height use
-    const mx=W*.04, my=H*.03, mw=W*.92, mh=H*.94;
-    const px=nx=>mx+nx*mw, py=ny=>my+ny*mh;
+    // Zoom into Central Europe: normalized x∈[0.10,0.72], y∈[0.20,0.82]
+    const zX0=0.10,zY0=0.20,zW=0.62,zH=0.62;
+    const mx=W*.03,my=H*.02,mw=W*.94,mh=H*.96;
+    const px=nx=>mx+(nx-zX0)/zW*mw, py=ny=>my+(ny-zY0)/zH*mh;
 
     // Ocean background gradient
     const bg=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,W*.7);
