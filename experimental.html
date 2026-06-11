@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qualequity — Experimental Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* ══ RESET & TOKENS ══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;cursor:none}
+:root{
+  --navy:#082A4D;--royal:#0A4EA3;--green:#12A85A;--amber:#F59E0B;--magenta:#C2184A;
+  --bg:#050D1A;--bg2:#0A1628;--tx:#F0F4F8;--mu:rgba(240,244,248,.55);
+  --serif:'DM Serif Display',Georgia,serif;--sans:'DM Sans',system-ui,sans-serif;
+}
+html{scroll-behavior:smooth;font-size:16px;background:var(--bg)}
+body{font-family:var(--sans);color:var(--tx);overflow-x:hidden;background:var(--bg)}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--sans);cursor:none}
+@media(pointer:coarse){*{cursor:auto!important}#cur,#cur-ring,#trail-canvas{display:none!important}}
+
+/* ══ CUSTOM CURSOR ══ */
+#cur{position:fixed;width:10px;height:10px;background:var(--royal);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .18s,height .18s,background .2s;mix-blend-mode:screen}
+#cur-ring{position:fixed;width:38px;height:38px;border:1.5px solid rgba(10,78,163,.6);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .1s,height .1s,border-color .2s}
+#cur.big{width:52px;height:52px;background:rgba(10,78,163,.2)}
+#cur-ring.big{width:64px;height:64px;border-color:rgba(10,78,163,.25)}
+#trail-canvas{position:fixed;inset:0;pointer-events:none;z-index:99990}
+
+/* ══ SCROLL PROGRESS ══ */
+#scroll-prog{position:fixed;top:0;left:0;height:2px;width:0%;background:linear-gradient(90deg,var(--royal),var(--green),var(--amber),var(--magenta));z-index:9999;box-shadow:0 0 10px rgba(10,78,163,.7);transition:width .08s linear}
+
+/* ══ NAV ══ */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 40px;height:70px;display:flex;align-items:center;justify-content:space-between;background:rgba(5,13,26,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06)}
+.nav-logo{font-family:var(--serif);font-size:22px;letter-spacing:.01em;position:relative;display:inline-block}
+.nav-logo .q1{color:#fff}.nav-logo .q2{color:rgba(255,255,255,.45)}
+.nav-logo.glitch{animation:glitch .8s steps(1) forwards}
+@keyframes glitch{
+  0%{text-shadow:none}
+  10%{text-shadow:3px 0 0 rgba(194,24,74,.8),-3px 0 0 rgba(10,78,163,.8);clip-path:inset(20% 0 60% 0)}
+  20%{text-shadow:-4px 0 0 rgba(18,168,90,.8),4px 0 0 rgba(245,158,11,.8);clip-path:inset(60% 0 10% 0)}
+  30%{text-shadow:2px 0 0 var(--magenta),-2px 0 0 var(--royal);clip-path:inset(5% 0 85% 0)}
+  40%{text-shadow:none;clip-path:none}
+  60%{text-shadow:1px 0 0 rgba(194,24,74,.5),-1px 0 0 rgba(10,78,163,.5)}
+  100%{text-shadow:none;clip-path:none}
+}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:13px;font-weight:500;color:var(--mu);transition:color .2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:1px;background:var(--royal);transform:scaleX(0);transition:transform .25s;transform-origin:left}
+.nav-links a:hover{color:#fff}
+.nav-links a:hover::after{transform:scaleX(1)}
+.btn-nav-cta{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2);padding:9px 22px;border-radius:8px;font-size:13px;font-weight:500;transition:all .25s;backdrop-filter:blur(8px)}
+.btn-nav-cta:hover{background:var(--royal);border-color:var(--royal);box-shadow:0 0 20px rgba(10,78,163,.5)}
+
+/* ══ HERO ══ */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden}
+#aurora-canvas{position:absolute;inset:0;width:100%;height:100%}
+#particle-canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero-noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1}
+.hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 40px;width:100%;padding-top:70px}
+.hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--royal);margin-bottom:22px;opacity:0;animation:fadeInUp .6s .3s ease forwards}
+.hero-h1{font-family:var(--serif);font-size:clamp(2.8rem,5.5vw,5rem);line-height:1.08;color:#fff;margin-bottom:28px;min-height:1.1em}
+.scramble-char{display:inline-block;transition:color .1s}
+.hero-sub{font-size:18px;font-weight:300;color:var(--mu);line-height:1.7;max-width:560px;margin-bottom:44px;min-height:1.5em}
+.cursor-blink{display:inline-block;width:2px;height:1.1em;background:var(--royal);vertical-align:text-bottom;animation:blink .8s step-end infinite;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:56px;opacity:0;animation:fadeInUp .6s 0s ease forwards}
+.btn-hero-p{display:inline-flex;align-items:center;gap:10px;background:var(--royal);color:#fff;padding:16px 32px;border-radius:12px;font-size:15px;font-weight:600;border:none;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
+.btn-hero-p::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .3s}
+.btn-hero-p:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 8px 32px rgba(10,78,163,.5)}
+.btn-hero-p:hover::before{opacity:1}
+.btn-hero-o{display:inline-flex;align-items:center;gap:10px;background:transparent;color:#fff;padding:15px 32px;border-radius:12px;font-size:15px;font-weight:500;border:1px solid rgba(255,255,255,.2);transition:all .3s;backdrop-filter:blur(8px)}
+.btn-hero-o:hover{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.07);transform:translateY(-2px)}
+.hero-norms{display:flex;gap:10px;flex-wrap:wrap;opacity:0;animation:fadeInUp .6s .1s ease forwards}
+.norm-tag{display:flex;align-items:center;gap:7px;padding:7px 16px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid;backdrop-filter:blur(8px)}
+.n9{background:rgba(10,78,163,.15);color:#93C5FD;border-color:rgba(10,78,163,.4)}
+.n14{background:rgba(18,168,90,.12);color:#6EE7B7;border-color:rgba(18,168,90,.35)}
+.n50{background:rgba(245,158,11,.12);color:#FCD34D;border-color:rgba(245,158,11,.35)}
+.n31{background:rgba(194,24,74,.12);color:#FCA5A5;border-color:rgba(194,24,74,.35)}
+.ndot{width:6px;height:6px;border-radius:50%}
+.scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2;opacity:.5}
+.scroll-hint span{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--mu)}
+.scroll-mouse{width:22px;height:34px;border:1.5px solid rgba(255,255,255,.3);border-radius:11px;display:flex;justify-content:center;padding-top:6px}
+.scroll-wheel{width:3px;height:7px;background:#fff;border-radius:2px;animation:scrollWheel 1.6s ease-in-out infinite}
+@keyframes scrollWheel{0%{transform:translateY(0);opacity:1}100%{transform:translateY(10px);opacity:0}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ MARQUEE ══ */
+.marquee-section{background:rgba(10,78,163,.06);border-top:1px solid rgba(10,78,163,.2);border-bottom:1px solid rgba(10,78,163,.2);padding:18px 0;overflow:hidden;position:relative}
+.marquee-section::before,.marquee-section::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:1;pointer-events:none}
+.marquee-section::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.marquee-section::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+.marquee-track{display:flex;width:max-content;animation:marqueeScroll 28s linear infinite}
+.marquee-track:hover{animation-play-state:paused}
+.marquee-track-r{display:flex;width:max-content;animation:marqueeScrollR 22s linear infinite;margin-top:12px}
+.marquee-track-r:hover{animation-play-state:paused}
+@keyframes marqueeScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes marqueeScrollR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+.marquee-item{display:flex;align-items:center;gap:8px;padding:0 28px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.35)}
+.marquee-item .mi-dot{width:4px;height:4px;border-radius:50%;background:var(--royal);flex-shrink:0}
+.marquee-item.accent{color:rgba(10,78,163,.8)}
+
+/* ══ SERVICES 3D FLIP ══ */
+#services{padding:120px 40px;max-width:1200px;margin:0 auto}
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--royal);margin-bottom:14px}
+.sec-h{font-family:var(--serif);font-size:clamp(2rem,3.5vw,3rem);color:#fff;margin-bottom:16px;line-height:1.15}
+.sec-sub{font-size:16px;font-weight:300;color:var(--mu);max-width:520px;line-height:1.75;margin-bottom:64px}
+.flip-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.flip-wrap{height:320px;perspective:900px}
+.flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.4,.2,.2,1)}
+.flip-wrap:hover .flip-inner,.flip-wrap.flipped .flip-inner{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;padding:28px;display:flex;flex-direction:column}
+.flip-front{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);justify-content:flex-end}
+.flip-back{background:rgba(10,78,163,.15);border:1px solid rgba(10,78,163,.3);transform:rotateY(180deg);justify-content:space-between}
+.flip-front::before{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(circle at 70% 20%, rgba(255,255,255,.05) 0%, transparent 60%)}
+.flip-icon{font-size:36px;margin-bottom:auto;padding-top:8px}
+.flip-norm{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;opacity:.55}
+.flip-title{font-size:17px;font-weight:600;color:#fff;line-height:1.3}
+.flip-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:8px;display:flex;align-items:center;gap:4px}
+.flip-back-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:12px}
+.flip-points{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1}
+.flip-points li{font-size:13px;color:rgba(255,255,255,.75);display:flex;align-items:flex-start;gap:7px;line-height:1.4}
+.flip-points li::before{content:'→';color:var(--royal);flex-shrink:0;font-size:11px;margin-top:2px}
+.flip-back-cta{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.15);transition:all .2s;margin-top:16px}
+.flip-back-cta:hover{background:var(--royal);border-color:var(--royal)}
+/* Color tints per card */
+.fc9 .flip-front{background:rgba(10,78,163,.08);border-color:rgba(10,78,163,.2)}
+.fc14 .flip-front{background:rgba(18,168,90,.07);border-color:rgba(18,168,90,.2)}
+.fc50 .flip-front{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2)}
+.fc31 .flip-front{background:rgba(194,24,74,.07);border-color:rgba(194,24,74,.2)}
+.fc14 .flip-back{background:rgba(18,168,90,.12);border-color:rgba(18,168,90,.3)}
+.fc50 .flip-back{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
+.fc31 .flip-back{background:rgba(194,24,74,.1);border-color:rgba(194,24,74,.3)}
+
+/* ══ PROCESS — HORIZONTAL PIN ══ */
+#process-pin{position:relative}
+.process-sticky-outer{height:500vh}
+.process-sticky{position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;background:var(--bg2)}
+.process-sticky::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.015) 1px,transparent 1px);background-size:30px 30px}
+.process-header{padding:0 40px 32px;flex-shrink:0;position:relative;z-index:2}
+.process-track-outer{flex:1;overflow:hidden;position:relative;z-index:2}
+.process-track{display:flex;gap:0;width:max-content;will-change:transform}
+.proc-step-h{width:calc(100vw - 80px);padding:0 40px;flex-shrink:0;display:flex;align-items:center;gap:40px}
+.step-num-big{font-family:var(--serif);font-size:clamp(5rem,12vw,9rem);color:rgba(255,255,255,.04);line-height:1;flex-shrink:0;user-select:none;transition:color .4s}
+.step-num-big.active{color:rgba(10,78,163,.15)}
+.step-content{max-width:480px}
+.step-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(10,78,163,.15);border:1px solid rgba(10,78,163,.3);border-radius:100px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#93C5FD;margin-bottom:20px}
+.step-badge-dot{width:6px;height:6px;border-radius:50%;background:#93C5FD;animation:stepPulse 1.5s ease-in-out infinite;opacity:0}
+.step-badge-dot.active{opacity:1}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 0 rgba(147,197,253,.5)}50%{box-shadow:0 0 0 6px rgba(147,197,253,0)}}
+.step-title-big{font-family:var(--serif);font-size:clamp(1.8rem,3.5vw,3rem);color:#fff;margin-bottom:16px;line-height:1.15}
+.step-desc-big{font-size:16px;font-weight:300;color:var(--mu);line-height:1.75;margin-bottom:24px}
+.step-tags{display:flex;gap:8px;flex-wrap:wrap}
+.step-tag-h{font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1)}
+.proc-prog-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--royal),var(--green),var(--amber),var(--magenta));box-shadow:0 0 8px rgba(10,78,163,.6);transition:width .05s linear}
+
+/* ══ STATS — SLOT MACHINE ══ */
+#stats{padding:120px 40px;background:var(--bg);position:relative;overflow:hidden}
+.stats-blob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;pointer-events:none;z-index:0;opacity:.5}
+.stats-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:60px}
+.stat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:36px 28px;text-align:center;position:relative;overflow:hidden;transition:all .3s}
+.stat-card:hover{background:rgba(10,78,163,.08);border-color:rgba(10,78,163,.25);transform:translateY(-4px)}
+.stat-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:1px;background:linear-gradient(90deg,transparent,var(--royal),transparent)}
+.slot-machine{height:72px;overflow:hidden;display:flex;justify-content:center;align-items:center;margin-bottom:12px}
+.slot-reel{display:flex;flex-direction:column;align-items:center;gap:0;will-change:transform}
+.slot-digit{font-family:var(--serif);font-size:3.8rem;color:#fff;line-height:1.0;text-align:center;height:72px;display:flex;align-items:center;justify-content:center;min-width:48px}
+.slot-suffix{font-family:var(--serif);font-size:2rem;color:var(--royal);line-height:72px;padding-left:4px}
+.stat-label{font-size:14px;font-weight:500;color:var(--mu);margin-bottom:8px}
+.stat-underline{height:2px;width:0;background:linear-gradient(90deg,var(--royal),var(--green));border-radius:1px;margin:0 auto;box-shadow:0 0 8px rgba(10,78,163,.4);transition:width 1s cubic-bezier(.22,1,.36,1)}
+.stat-card.counted .stat-underline{width:60%}
+.stat-desc{font-size:13px;color:rgba(255,255,255,.25);margin-top:10px;line-height:1.5}
+
+/* ══ CTA STRIP ══ */
+#cta-strip{padding:100px 40px;background:var(--bg2);position:relative;overflow:hidden;text-align:center}
+#cta-strip::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(10,78,163,.2) 0%,transparent 60%)}
+.cta-strip-inner{position:relative;z-index:1;max-width:700px;margin:0 auto}
+.cta-big-h{font-family:var(--serif);font-size:clamp(2rem,4vw,3.4rem);color:#fff;line-height:1.15;margin-bottom:20px}
+.cta-big-h em{font-style:italic;background:linear-gradient(135deg,var(--royal),#60A5FA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.cta-big-sub{font-size:16px;font-weight:300;color:var(--mu);margin-bottom:40px;line-height:1.7}
+.btn-cta-big{display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--royal) 0%,#1E6FE8 100%);color:#fff;padding:18px 40px;border-radius:14px;font-size:16px;font-weight:600;border:none;transition:all .3s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden}
+.btn-cta-big::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at var(--rx,50%) var(--ry,50%),rgba(255,255,255,.25),transparent 60%);opacity:0;transition:opacity .4s}
+.btn-cta-big:hover{transform:translateY(-4px) scale(1.03);box-shadow:0 16px 48px rgba(10,78,163,.5)}
+.btn-cta-big:hover::after{opacity:1}
+.cta-trust{display:flex;justify-content:center;gap:28px;margin-top:32px;flex-wrap:wrap}
+.ct-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.35);font-weight:500}
+.ct-pill::before{content:'✓';color:var(--green);font-weight:700}
+
+/* ══ FOOTER ══ */
+footer{background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.06);padding:40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.ft-logo{font-family:var(--serif);font-size:18px}.ft-logo .q1{color:rgba(255,255,255,.9)}.ft-logo .q2{color:rgba(255,255,255,.35)}
+.ft-links{display:flex;gap:24px}.ft-links a{font-size:13px;color:rgba(255,255,255,.3);transition:color .2s}.ft-links a:hover{color:#fff}
+.ft-copy{font-size:12px;color:rgba(255,255,255,.2)}
+
+/* ══ CLIP-PATH REVEAL ══ */
+.reveal-iris{clip-path:circle(0% at 50% 50%);transition:clip-path .9s cubic-bezier(.4,.0,.2,1)}
+.reveal-iris.visible{clip-path:circle(150% at 50% 50%)}
+.reveal-wipe{clip-path:inset(0 100% 0 0);transition:clip-path .8s cubic-bezier(.4,.0,.2,1)}
+.reveal-wipe.visible{clip-path:inset(0 0% 0 0)}
+.reveal-up-exp{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+.reveal-up-exp.visible{opacity:1;transform:translateY(0)}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:900px){
+  .flip-grid{grid-template-columns:1fr 1fr}
+  .stats-grid{grid-template-columns:1fr}
+  .flip-wrap .flip-inner{transform:none!important}
+  .flip-wrap .flip-back{display:none}
+  nav .nav-links{display:none}
+}
+@media(max-width:600px){
+  .flip-grid{grid-template-columns:1fr}
+  #services,#stats,#cta-strip{padding:80px 20px}
+  .hero-content{padding:0 20px;padding-top:70px}
+  footer{padding:28px 20px;flex-direction:column;text-align:center}
+  .ft-links{flex-wrap:wrap;justify-content:center}
+  .process-sticky-outer{height:400vh}
+  .step-num-big{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ── CURSOR ── -->
+<div id="cur"></div>
+<div id="cur-ring"></div>
+<canvas id="trail-canvas"></canvas>
+<div id="scroll-prog"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="#hero" class="nav-logo" id="nav-logo" aria-label="Qualequity">
+    <span class="q1">Qual</span><span class="q2">equity</span>
+  </a>
+  <div class="nav-links">
+    <a href="#services">Leistungen</a>
+    <a href="#process-pin">Vorgehen</a>
+    <a href="#stats">Expertise</a>
+    <a href="#cta-strip">Kontakt</a>
+  </div>
+  <button class="btn-nav-cta" onclick="document.getElementById('cta-strip').scrollIntoView({behavior:'smooth'})">Erstgespräch →</button>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <canvas id="aurora-canvas"></canvas>
+  <canvas id="particle-canvas"></canvas>
+  <div class="hero-noise"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">✦ Externer QMB &amp; ISO Beratung für KMU</p>
+    <h1 class="hero-h1" id="hero-h1" aria-label="Zertifizierung, die wirklich im Alltag funktioniert."></h1>
+    <p class="hero-sub" id="hero-sub"></p>
+    <div class="hero-ctas">
+      <button class="btn-hero-p" onclick="document.getElementById('cta-strip').scrollIntoView({behavior:'smooth'})">Kostenloses Erstgespräch <span>→</span></button>
+      <button class="btn-hero-o" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">Leistungen entdecken</button>
+    </div>
+    <div class="hero-norms">
+      <span class="norm-tag n9"><span class="ndot" style="background:#3B82F6"></span>ISO 9001</span>
+      <span class="norm-tag n14"><span class="ndot" style="background:#10B981"></span>ISO 14001</span>
+      <span class="norm-tag n50"><span class="ndot" style="background:#F59E0B"></span>ISO 50001</span>
+      <span class="norm-tag n31"><span class="ndot" style="background:#F43F5E"></span>ISO 31000</span>
+    </div>
+  </div>
+  <div class="scroll-hint" aria-hidden="true">
+    <span>Scroll</span>
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+  </div>
+</section>
+
+<!-- ── MARQUEE ── -->
+<div class="marquee-section" aria-hidden="true">
+  <div class="marquee-track" id="mq1"></div>
+  <div class="marquee-track-r" id="mq2"></div>
+</div>
+
+<!-- ── SERVICES ── -->
+<section id="services">
+  <p class="sec-label reveal-up-exp">Leistungsportfolio</p>
+  <h2 class="sec-h reveal-up-exp">Vier Normen. Ein Ansprechpartner.<br><em style="font-style:italic;color:rgba(255,255,255,.4)">Integriert. Praxisnah.</em></h2>
+  <p class="sec-sub reveal-up-exp">Hover über eine Karte, um mehr zu sehen.</p>
+  <div class="flip-grid">
+
+    <div class="flip-wrap fc9 reveal-up-exp">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="flip-icon">📋</div>
+          <div>
+            <div class="flip-norm" style="color:#93C5FD">ISO 9001 · Qualität</div>
+            <h3 class="flip-title">Qualitätsmanagementsystem</h3>
+            <p class="flip-hint">↻ Hover für Details</p>
+          </div>
+        </div>
+        <div class="flip-face flip-back">
+          <div>
+            <div class="flip-back-title">ISO 9001 — Was wir liefern</div>
+            <ul class="flip-points">
+              <li>GAP-Analyse & Scope-Definition</li>
+              <li>Aufbau der Dokumentenstruktur</li>
+              <li>Prozessbeschreibungen & KPIs</li>
+              <li>Internes Voraudit & Stage-0</li>
+              <li>Begleitung bis zum Zertifikat</li>
+            </ul>
+          </div>
+          <a href="#cta-strip" class="flip-back-cta">Anfragen →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="flip-wrap fc14 reveal-up-exp">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="flip-icon">🌱</div>
+          <div>
+            <div class="flip-norm" style="color:#6EE7B7">ISO 14001 · Umwelt</div>
+            <h3 class="flip-title">Umweltmanagementsystem</h3>
+            <p class="flip-hint">↻ Hover für Details</p>
+          </div>
+        </div>
+        <div class="flip-face flip-back" style="background:rgba(18,168,90,.12);border-color:rgba(18,168,90,.3)">
+          <div>
+            <div class="flip-back-title">ISO 14001 — Was wir liefern</div>
+            <ul class="flip-points">
+              <li>Umweltaspekte systematisch erfassen</li>
+              <li>Rechtskataster aufbauen</li>
+              <li>ESG-konforme Dokumentation</li>
+              <li>Kombination mit ISO 50001</li>
+              <li>Zertifizierungsbegleitung</li>
+            </ul>
+          </div>
+          <a href="#cta-strip" class="flip-back-cta" style="background:rgba(18,168,90,.2);border-color:rgba(18,168,90,.4)">Anfragen →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="flip-wrap fc50 reveal-up-exp">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="flip-icon">⚡</div>
+          <div>
+            <div class="flip-norm" style="color:#FCD34D">ISO 50001 · Energie</div>
+            <h3 class="flip-title">Energiemanagementsystem</h3>
+            <p class="flip-hint">↻ Hover für Details</p>
+          </div>
+        </div>
+        <div class="flip-face flip-back" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)">
+          <div>
+            <div class="flip-back-title">ISO 50001 — Was wir liefern</div>
+            <ul class="flip-points">
+              <li>SEEB & EnPI Aufbau</li>
+              <li>Energetische Basislinie</li>
+              <li>Spitzenausgleich & BAFA</li>
+              <li>Kostenreduktion messbar</li>
+              <li>Kombination mit ISO 14001</li>
+            </ul>
+          </div>
+          <a href="#cta-strip" class="flip-back-cta" style="background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.4)">Anfragen →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="flip-wrap fc31 reveal-up-exp">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="flip-icon">🛡️</div>
+          <div>
+            <div class="flip-norm" style="color:#FCA5A5">ISO 31000 · Risiko</div>
+            <h3 class="flip-title">Risikomanagementsystem</h3>
+            <p class="flip-hint">↻ Hover für Details</p>
+          </div>
+        </div>
+        <div class="flip-face flip-back" style="background:rgba(194,24,74,.1);border-color:rgba(194,24,74,.3)">
+          <div>
+            <div class="flip-back-title">ISO 31000 — Was wir liefern</div>
+            <ul class="flip-points">
+              <li>Integriertes Risikoregister</li>
+              <li>GF-Haftungsschutz dokumentiert</li>
+              <li>8 Prinzipien implementiert</li>
+              <li>IMS-Backbone für alle Normen</li>
+              <li>Auditfeste Dokumentation</li>
+            </ul>
+          </div>
+          <a href="#cta-strip" class="flip-back-cta" style="background:rgba(194,24,74,.2);border-color:rgba(194,24,74,.4)">Anfragen →</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── PROCESS — HORIZONTAL PIN ── -->
+<div id="process-pin">
+  <div class="process-sticky-outer">
+    <div class="process-sticky" id="process-sticky">
+      <div class="process-header">
+        <p class="sec-label">Unser Vorgehen</p>
+        <h2 class="sec-h" style="margin-bottom:0;font-size:clamp(1.6rem,2.8vw,2.4rem)">Von der GAP-Analyse zum Zertifikat</h2>
+      </div>
+      <div class="process-track-outer">
+        <div class="process-track" id="process-track">
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn0">01</div>
+            <div class="step-content">
+              <div class="step-badge"><span class="step-badge-dot" id="sd0"></span>Phase 01</div>
+              <h3 class="step-title-big">Analyse &amp; GAP</h3>
+              <p class="step-desc-big">Wir erfassen Ihren Ist-Zustand, identifizieren Normabweichungen und definieren den exakten Scope. Der Startpunkt für alles, was folgt.</p>
+              <div class="step-tags"><span class="step-tag-h">GAP-Analyse</span><span class="step-tag-h">Scope-Definition</span><span class="step-tag-h">Ist-Zustand</span></div>
+            </div>
+          </div>
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn1">02</div>
+            <div class="step-content">
+              <div class="step-badge"><span class="step-badge-dot" id="sd1"></span>Phase 02</div>
+              <h3 class="step-title-big">Aufbau &amp; Dokumentation</h3>
+              <p class="step-desc-big">Prozesse, Dokumente, Ziele und Risikoregister — schlank, normkonform und praxistauglich. Kein Papiertiger, sondern ein System, das lebt.</p>
+              <div class="step-tags"><span class="step-tag-h">Dokumentenstruktur</span><span class="step-tag-h">Risikoregister</span><span class="step-tag-h">KPIs</span></div>
+            </div>
+          </div>
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn2">03</div>
+            <div class="step-content">
+              <div class="step-badge"><span class="step-badge-dot" id="sd2"></span>Phase 03</div>
+              <h3 class="step-title-big">Implementierung &amp; Schulung</h3>
+              <p class="step-desc-big">Das System geht live — mit Ihrem Team als Träger. Schulungen, interner Audit und Managementbewertung machen Ihr Unternehmen audit-ready.</p>
+              <div class="step-tags"><span class="step-tag-h">Team-Schulung</span><span class="step-tag-h">Interner Audit</span><span class="step-tag-h">MBW</span></div>
+            </div>
+          </div>
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn3">04</div>
+            <div class="step-content">
+              <div class="step-badge"><span class="step-badge-dot" id="sd3"></span>Phase 04</div>
+              <h3 class="step-title-big">Zertifizierungsaudit</h3>
+              <p class="step-desc-big">Begleitung durch Stage 1 und Stage 2 beim akkreditierten Zertifizierer (TÜV, DQS, Bureau Veritas). Wir sind dabei — remote oder vor Ort.</p>
+              <div class="step-tags"><span class="step-tag-h">Stage 1 + 2</span><span class="step-tag-h">TÜV / DQS</span><span class="step-tag-h">Audit-Begleitung</span></div>
+            </div>
+          </div>
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn4">05</div>
+            <div class="step-content">
+              <div class="step-badge"><span class="step-badge-dot" id="sd4"></span>Phase 05</div>
+              <h3 class="step-title-big">Dauerhafter Retainer</h3>
+              <p class="step-desc-big">Nach dem Zertifikat ist vor dem Überwachungsaudit. Als externer QMB bleiben wir dauerhaft — kein Risiko, keine Überraschungen, kein Aufwand für Sie.</p>
+              <div class="step-tags"><span class="step-tag-h">Externer QMB</span><span class="step-tag-h">Ab 549 €/Mo</span><span class="step-tag-h">Langfristig</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="proc-prog-bar" id="proc-prog-bar" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<section id="stats">
+  <svg class="stats-blob" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <radialGradient id="blobG" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(10,78,163,0.12)"/>
+        <stop offset="100%" stop-color="transparent"/>
+      </radialGradient>
+    </defs>
+    <path id="blob-path" fill="url(#blobG)"/>
+  </svg>
+  <div class="stats-inner">
+    <p class="sec-label reveal-up-exp">Qualequity in Zahlen</p>
+    <h2 class="sec-h reveal-up-exp">Zertifizierte Expertise.<br>Messbare Ergebnisse.</h2>
+    <div class="stats-grid">
+      <div class="stat-card reveal-up-exp" data-slot="10" data-suffix="+" data-label="Jahre Praxiserfahrung" data-desc="In ISO 9001, 14001, 50001 und 31000 aktiv">
+        <div class="slot-machine"><div class="slot-reel" id="reel-0"></div><span class="slot-suffix">+</span></div>
+        <div class="stat-label">Jahre Praxiserfahrung</div>
+        <div class="stat-underline"></div>
+        <div class="stat-desc">ISO 9001, 14001, 50001 und 31000 aktiv</div>
+      </div>
+      <div class="stat-card reveal-up-exp" data-slot="4" data-suffix="" data-label="ISO-Normen zertifiziert" data-desc="Alle vier High-Level-Structure Normen">
+        <div class="slot-machine"><div class="slot-reel" id="reel-1"></div></div>
+        <div class="stat-label">ISO-Normen zertifiziert</div>
+        <div class="stat-underline"></div>
+        <div class="stat-desc">Alle vier High-Level-Structure Normen</div>
+      </div>
+      <div class="stat-card reveal-up-exp" data-slot="100" data-suffix="%" data-label="Remote möglich" data-desc="Vollständig ortsunabhängig — deutschlandweit">
+        <div class="slot-machine"><div class="slot-reel" id="reel-2"></div><span class="slot-suffix">%</span></div>
+        <div class="stat-label">Remote möglich</div>
+        <div class="stat-underline"></div>
+        <div class="stat-desc">Vollständig ortsunabhängig — deutschlandweit</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section id="cta-strip">
+  <div class="cta-strip-inner">
+    <h2 class="cta-big-h reveal-up-exp">Bereit für <em>ISO-Zertifizierung</em>,<br>die wirklich funktioniert?</h2>
+    <p class="cta-big-sub reveal-up-exp">30 Minuten. Kein Verkaufsdruck. Wir zeigen Ihnen den schnellsten Weg zur Zertifizierung — mit Festpreis, ohne Overhead.</p>
+    <button class="btn-cta-big reveal-up-exp" id="btn-cta-big" onclick="window.location.href='mailto:christian.getz@qualequity.de'">
+      <span>Kostenloses Erstgespräch anfragen</span>
+      <span style="font-size:20px">→</span>
+    </button>
+    <div class="cta-trust reveal-up-exp">
+      <span class="ct-pill">Festpreis ab 12.900 €</span>
+      <span class="ct-pill">Retainer ab 549 €/Mo</span>
+      <span class="ct-pill">100% Remote möglich</span>
+      <span class="ct-pill">Keine Bindung</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="ft-logo"><span class="q1">Qual</span><span class="q2">equity</span></div>
+  <div class="ft-links">
+    <a href="https://www.qualequity.de">qualequity.de</a>
+    <a href="mailto:christian.getz@qualequity.de">E-Mail</a>
+    <a href="https://linkedin.com/company/qualequity" target="_blank">LinkedIn</a>
+  </div>
+  <span class="ft-copy">© 2025 Qualequity — Quality Meets Equity</span>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════
+   QUALEQUITY EXPERIMENTAL — All Animations
+   ════════════════════════════════════════════ */
+
+// ── 1. AURORA CANVAS ─────────────────────────
+(function() {
+  const canvas = document.getElementById('aurora-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, mouse = { x: 0.5, y: 0.5 };
+
+  const blobs = [
+    { x: 0.75, y: 0.25, r: 0.45, color: '#0A4EA3', vx: 0.0003, vy: 0.0002, t: 0 },
+    { x: 0.25, y: 0.65, r: 0.38, color: '#12A85A', vx: -0.0002, vy: 0.0003, t: 1.5 },
+    { x: 0.85, y: 0.7,  r: 0.32, color: '#F59E0B', vx: 0.0002, vy: -0.0002, t: 3 },
+    { x: 0.5,  y: 0.3,  r: 0.28, color: '#C2184A', vx: -0.0003, vy: 0.0001, t: 5 },
+    { x: 0.15, y: 0.35, r: 0.34, color: '#082A4D', vx: 0.0001, vy: -0.0003, t: 2 },
+  ];
+
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+
+  let raf;
+  function draw(ts) {
+    raf = requestAnimationFrame(draw);
+    ctx.clearRect(0, 0, W, H);
+
+    blobs.forEach(b => {
+      b.t += 0.008;
+      const mx = (mouse.x - 0.5) * 0.06;
+      const my = (mouse.y - 0.5) * 0.06;
+      const bx = (b.x + Math.sin(b.t * b.vx * 3000 + b.t) * 0.12 + mx) * W;
+      const by = (b.y + Math.cos(b.t * b.vy * 3000 + b.t * 0.7) * 0.1 + my) * H;
+      const br = b.r * Math.min(W, H) * 0.9;
+
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, b.color + '3A');
+      g.addColorStop(0.4, b.color + '18');
+      g.addColorStop(1, b.color + '00');
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX / window.innerWidth;
+    mouse.y = e.clientY / window.innerHeight;
+  }, { passive: true });
+
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  draw(0);
+})();
+
+// ── 2. PARTICLE NETWORK ──────────────────────
+(function() {
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, mouse = { x: -999, y: -999 };
+  const MAX_DIST = 130;
+  const PARTICLE_COUNT = window.innerWidth < 600 ? 35 : 70;
+
+  const NORMS = [
+    { label: 'ISO 9001', color: '#3B82F6', px: 0.72, py: 0.35 },
+    { label: 'ISO 14001', color: '#10B981', px: 0.8, py: 0.65 },
+    { label: 'ISO 50001', color: '#F59E0B', px: 0.62, py: 0.75 },
+    { label: 'ISO 31000', color: '#F43F5E', px: 0.88, py: 0.5 },
+  ];
+
+  let particles = [];
+
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 2 + 0.5,
+        fixed: false
+      });
+    }
+    NORMS.forEach(n => {
+      particles.push({ x: n.px * W, y: n.py * H, vx: 0, vy: 0, r: 5, fixed: true, color: n.color, label: n.label, baseX: n.px, baseY: n.py });
+    });
+  }
+
+  function draw() {
+    requestAnimationFrame(draw);
+    ctx.clearRect(0, 0, W, H);
+
+    particles.forEach(p => {
+      if (p.fixed) {
+        p.x = p.baseX * W; p.y = p.baseY * H;
+        return;
+      }
+      // Mouse attract
+      const dx = mouse.x - p.x, dy = mouse.y - p.y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 150) { p.vx += dx/d * 0.02; p.vy += dy/d * 0.02; }
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    });
+
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.sqrt(dx*dx+dy*dy);
+        if (d < MAX_DIST) {
+          const alpha = (1 - d/MAX_DIST) * 0.25;
+          const col = a.fixed ? a.color : b.fixed ? b.color : '#3B82F6';
+          ctx.strokeStyle = col + Math.round(alpha * 255).toString(16).padStart(2,'0');
+          ctx.lineWidth = a.fixed || b.fixed ? 1.5 : 0.7;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    particles.forEach(p => {
+      if (p.fixed) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 10px DM Sans, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x, p.y - 12);
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fill();
+      }
+    });
+  }
+
+  window.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  }, { passive: true });
+
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  draw();
+})();
+
+// ── 3. CURSOR WITH COLOR TRAIL ───────────────
+(function() {
+  if (!window.matchMedia('(pointer:fine)').matches) return;
+  const cur = document.getElementById('cur');
+  const ring = document.getElementById('cur-ring');
+  const trailCanvas = document.getElementById('trail-canvas');
+  const tCtx = trailCanvas.getContext('2d');
+
+  const TRAIL_LEN = 24;
+  const TRAIL_COLORS = ['#0A4EA3','#12A85A','#F59E0B','#C2184A','#3B82F6','#10B981'];
+  let mx = -200, my = -200, rx = -200, ry = -200;
+  let trail = [];
+  let colorIdx = 0;
+  let lastX = 0, lastY = 0;
+
+  function resizeTrail() {
+    trailCanvas.width = window.innerWidth;
+    trailCanvas.height = window.innerHeight;
+  }
+  resizeTrail();
+  window.addEventListener('resize', resizeTrail, { passive: true });
+
+  document.addEventListener('mousemove', e => {
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if (Math.abs(dx) + Math.abs(dy) > 3) {
+      colorIdx = (colorIdx + 1) % TRAIL_COLORS.length;
+      lastX = e.clientX; lastY = e.clientY;
+    }
+    mx = e.clientX; my = e.clientY;
+    trail.push({ x: mx, y: my, age: 0, color: TRAIL_COLORS[colorIdx] });
+    if (trail.length > TRAIL_LEN) trail.shift();
+    cur.style.left = mx + 'px';
+    cur.style.top = my + 'px';
+  }, { passive: true });
+
+  const hoverEls = 'a,button,.flip-wrap,.stat-card,.norm-tag';
+  document.querySelectorAll(hoverEls).forEach(el => {
+    el.addEventListener('mouseenter', () => { cur.classList.add('big'); ring.classList.add('big'); });
+    el.addEventListener('mouseleave', () => { cur.classList.remove('big'); ring.classList.remove('big'); });
+  });
+
+  function animTrail() {
+    requestAnimationFrame(animTrail);
+    rx += (mx - rx) * 0.13;
+    ry += (my - ry) * 0.13;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+
+    tCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+    trail.forEach((p, i) => {
+      p.age++;
+      const progress = i / trail.length;
+      const alpha = progress * 0.7;
+      const size = progress * 6 + 1;
+      tCtx.beginPath();
+      tCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      tCtx.fillStyle = p.color + Math.round(alpha * 255).toString(16).padStart(2, '0');
+      tCtx.fill();
+    });
+  }
+  animTrail();
+})();
+
+// ── 4. TEXT SCRAMBLE ─────────────────────────
+(function() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*<>?/';
+  const target = 'Zertifizierung, die wirklich im Alltag funktioniert.';
+  const el = document.getElementById('hero-h1');
+  let frame = 0;
+  let resolved = new Array(target.length).fill(false);
+
+  function scramble() {
+    let html = '';
+    let allDone = true;
+    for (let i = 0; i < target.length; i++) {
+      if (target[i] === ' ') { html += ' '; continue; }
+      if (resolved[i]) {
+        html += `<span class="scramble-char" style="color:#fff">${target[i]}</span>`;
+      } else {
+        allDone = false;
+        const reveal = frame > i * 1.5;
+        if (reveal) {
+          resolved[i] = true;
+          html += `<span class="scramble-char" style="color:#fff">${target[i]}</span>`;
+        } else {
+          const rChar = chars[Math.floor(Math.random() * chars.length)];
+          const progress = frame / (i * 1.5 + 1);
+          const alpha = Math.max(0.2, progress);
+          html += `<span class="scramble-char" style="color:rgba(10,78,163,${alpha})">${rChar}</span>`;
+        }
+      }
+    }
+    el.innerHTML = html;
+    frame++;
+    if (!allDone) requestAnimationFrame(scramble);
+    else startTypewriter();
+  }
+  setTimeout(() => requestAnimationFrame(scramble), 400);
+})();
+
+// ── 5. TYPEWRITER ────────────────────────────
+function startTypewriter() {
+  const sub = document.getElementById('hero-sub');
+  const text = 'Ihr externer QMB für ISO 9001, 14001, 50001 & 31000 — strukturiert, praxisnah, dauerhaft.';
+  let i = 0;
+  sub.innerHTML = '<span class="cursor-blink"></span>';
+
+  function type() {
+    if (i <= text.length) {
+      sub.innerHTML = text.slice(0, i) + '<span class="cursor-blink"></span>';
+      i++;
+      setTimeout(type, 28 + Math.random() * 20);
+    } else {
+      // Remove cursor after pause
+      setTimeout(() => {
+        const blink = sub.querySelector('.cursor-blink');
+        if (blink) blink.style.display = 'none';
+      }, 2200);
+    }
+  }
+  setTimeout(type, 300);
+}
+
+// ── 6. MARQUEE CONTENT ───────────────────────
+(function() {
+  const items1 = ['ISO 9001','ISO 14001','ISO 50001','ISO 31000','Externer QMB','Quality Meets Equity','IMS Beratung','Festpreis','Zertifizierung','KMU Beratung','GAP-Analyse','Audit-Begleitung'];
+  const items2 = ['Qualitätsmanagement','Umweltmanagement','Energiemanagement','Risikomanagement','NRW · Deutschlandweit','Remote & Vor Ort','549 €/Monat','10+ Jahre Erfahrung'];
+
+  function buildMarquee(id, arr, accent) {
+    const el = document.getElementById(id);
+    const doubled = [...arr, ...arr];
+    el.innerHTML = doubled.map((t, i) => `<span class="marquee-item${accent && i % 4 === 0 ? ' accent' : ''}"><span class="mi-dot"></span>${t}</span>`).join('');
+  }
+  buildMarquee('mq1', items1, false);
+  buildMarquee('mq2', items2, true);
+})();
+
+// ── 7. HORIZONTAL PINNED SCROLL ──────────────
+(function() {
+  const outer = document.querySelector('.process-sticky-outer');
+  const sticky = document.getElementById('process-sticky');
+  const track = document.getElementById('process-track');
+  const progBar = document.getElementById('proc-prog-bar');
+  const steps = 5;
+
+  function update() {
+    const rect = outer.getBoundingClientRect();
+    const totalScroll = outer.offsetHeight - window.innerHeight;
+    const scrolled = -rect.top;
+    if (scrolled < 0 || scrolled > totalScroll) return;
+    const progress = scrolled / totalScroll;
+    const stepWidth = window.innerWidth;
+    const maxTravel = stepWidth * (steps - 1);
+    const travel = progress * maxTravel;
+    track.style.transform = `translateX(-${travel}px)`;
+    progBar.style.width = (progress * 100) + '%';
+
+    const activeStep = Math.round(progress * (steps - 1));
+    for (let i = 0; i < steps; i++) {
+      const sn = document.getElementById('sn' + i);
+      const sd = document.getElementById('sd' + i);
+      if (sn) sn.classList.toggle('active', i === activeStep);
+      if (sd) sd.classList.toggle('active', i === activeStep);
+    }
+  }
+
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update, { passive: true });
+})();
+
+// ── 8. SLOT MACHINE COUNTERS ─────────────────
+(function() {
+  const DIGITS_PER_REEL = 20;
+
+  function buildReel(el, targetNum) {
+    const digits = String(targetNum).split('');
+    el.innerHTML = '';
+    digits.forEach((d, di) => {
+      const col = document.createElement('div');
+      col.style.cssText = 'display:inline-flex;flex-direction:column;overflow:hidden;height:72px;';
+      const inner = document.createElement('div');
+      inner.style.cssText = 'display:flex;flex-direction:column;transition:transform 1.2s cubic-bezier(.4,0,.2,1);';
+      inner.style.transitionDelay = (di * 0.15) + 's';
+      for (let n = 0; n <= 9; n++) {
+        const span = document.createElement('div');
+        span.className = 'slot-digit';
+        span.textContent = n;
+        inner.appendChild(span);
+      }
+      // Extra digits for overshoot
+      for (let n = 0; n <= parseInt(d); n++) {
+        const span = document.createElement('div');
+        span.className = 'slot-digit';
+        span.textContent = n;
+        inner.appendChild(span);
+      }
+      inner.dataset.target = d;
+      col.appendChild(inner);
+      el.appendChild(col);
+    });
+  }
+
+  function spinReel(el) {
+    el.querySelectorAll('div > div').forEach(inner => {
+      const t = parseInt(inner.dataset.target);
+      const totalItems = 10 + t + 1;
+      const targetIdx = totalItems - 1;
+      inner.style.transform = `translateY(-${targetIdx * 72}px)`;
+    });
+  }
+
+  const cards = document.querySelectorAll('.stat-card');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const card = e.target;
+      const val = parseInt(card.dataset.slot);
+      const reelIdx = [...cards].indexOf(card);
+      const reelEl = document.getElementById('reel-' + reelIdx);
+      if (!reelEl) return;
+      buildReel(reelEl, val);
+      setTimeout(() => {
+        spinReel(reelEl);
+        card.classList.add('counted');
+      }, 200 + reelIdx * 150);
+      obs.unobserve(card);
+    });
+  }, { threshold: 0.5 });
+
+  cards.forEach(c => obs.observe(c));
+})();
+
+// ── 9. MORPHING BLOB ─────────────────────────
+(function() {
+  const path = document.getElementById('blob-path');
+  if (!path) return;
+  let t = 0;
+
+  function spline(cx, cy, r, points, offsets) {
+    const step = (Math.PI * 2) / points;
+    let d = '';
+    const pts = [];
+    for (let i = 0; i < points; i++) {
+      const angle = i * step - Math.PI / 2;
+      const rad = r + offsets[i];
+      pts.push({ x: cx + Math.cos(angle) * rad, y: cy + Math.sin(angle) * rad });
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const p0 = pts[(i - 1 + pts.length) % pts.length];
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % pts.length];
+      const p3 = pts[(i + 2) % pts.length];
+      if (i === 0) d += `M ${p1.x} ${p1.y}`;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+    }
+    return d + 'Z';
+  }
+
+  const pts = 8;
+  const phases = Array.from({ length: pts }, () => Math.random() * Math.PI * 2);
+  const speeds = Array.from({ length: pts }, () => 0.003 + Math.random() * 0.004);
+  const amps = Array.from({ length: pts }, () => 30 + Math.random() * 50);
+
+  function animBlob() {
+    requestAnimationFrame(animBlob);
+    t += 0.012;
+    const offsets = phases.map((ph, i) => Math.sin(t * speeds[i] * 200 + ph) * amps[i]);
+    path.setAttribute('d', spline(350, 350, 200, pts, offsets));
+  }
+  animBlob();
+})();
+
+// ── 10. SCROLL REVEALS ───────────────────────
+(function() {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal-up-exp,.reveal-wipe,.reveal-iris').forEach((el, i) => {
+    el.style.transitionDelay = (i % 4) * 0.09 + 's';
+    obs.observe(el);
+  });
+})();
+
+// ── 11. SCROLL PROGRESS ──────────────────────
+window.addEventListener('scroll', () => {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+  document.getElementById('scroll-prog').style.width = pct + '%';
+
+  const sh = document.querySelector('.scroll-hint');
+  if (sh) sh.style.opacity = window.scrollY > 80 ? '0' : '0.5';
+}, { passive: true });
+
+// ── 12. GLITCH on LOGO LOAD ──────────────────
+window.addEventListener('load', () => {
+  const logo = document.getElementById('nav-logo');
+  if (logo) {
+    logo.classList.add('glitch');
+    logo.addEventListener('mouseenter', () => {
+      logo.classList.remove('glitch');
+      void logo.offsetWidth;
+      logo.classList.add('glitch');
+    });
+  }
+});
+
+// ── 13. CTA BUTTON RIPPLE ────────────────────
+document.getElementById('btn-cta-big')?.addEventListener('mousemove', function(e) {
+  const r = this.getBoundingClientRect();
+  this.style.setProperty('--rx', ((e.clientX - r.left) / r.width * 100) + '%');
+  this.style.setProperty('--ry', ((e.clientY - r.top) / r.height * 100) + '%');
+});
+
+// ── 14. FLIP CARDS mobile (click) ────────────
+if (window.matchMedia('(hover:none)').matches) {
+  document.querySelectorAll('.flip-wrap').forEach(w => {
+    w.addEventListener('click', () => w.classList.toggle('flipped'));
+  });
+}
+
+// ── 15. NAV SCROLL SHADOW ────────────────────
+window.addEventListener('scroll', () => {
+  document.querySelector('nav').style.boxShadow =
+    window.scrollY > 20 ? '0 4px 32px rgba(0,0,0,.4)' : 'none';
+}, { passive: true });
+
+</script>
+</body>
+</html>
