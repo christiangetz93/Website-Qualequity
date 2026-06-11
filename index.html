@@ -1287,6 +1287,67 @@ footer::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
 /* ─── Reduced motion ─────────────────────────────── */
 @media(prefers-reduced-motion:reduce){.hero-orb,.scroll-arrow{animation:none!important}.reveal-up,.reveal-left,.reveal-scale{opacity:1!important;transform:none!important;transition:none!important}.tilt-card{transform:none!important}}
 
+/* ─── Flip Cards — Leistungsportfolio ───────────── */
+.flip-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:48px}
+@media(max-width:900px){.flip-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.flip-grid{grid-template-columns:1fr}}
+.flip-wrap{height:340px;perspective:900px;cursor:pointer}
+.flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.4,.2,.2,1)}
+.flip-wrap:hover .flip-inner,.flip-wrap.flipped .flip-inner{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--r);padding:28px;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(8,42,77,.07)}
+.flip-front{justify-content:flex-end;border:1px solid var(--bd)}
+.flip-back{transform:rotateY(180deg);justify-content:space-between;border:1px solid}
+.flip-front::before{content:'';position:absolute;inset:0;border-radius:var(--r);background:radial-gradient(circle at 70% 15%,rgba(255,255,255,.9) 0%,transparent 70%);pointer-events:none}
+.flip-icon{font-size:36px;margin-bottom:auto;padding-top:8px;position:relative}
+.flip-norm{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;position:relative}
+.flip-title{font-size:17px;font-weight:700;line-height:1.3;position:relative}
+.flip-hint{font-size:11px;margin-top:8px;display:flex;align-items:center;gap:4px;position:relative;opacity:.5}
+.flip-back-title{font-size:15px;font-weight:700;margin-bottom:12px;color:#fff}
+.flip-points{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1}
+.flip-points li{font-size:13px;color:rgba(255,255,255,.82);display:flex;align-items:flex-start;gap:7px;line-height:1.4}
+.flip-points li::before{content:'→';flex-shrink:0;font-size:11px;margin-top:2px;color:rgba(255,255,255,.6)}
+.flip-back-cta{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;transition:all .2s;margin-top:12px;text-decoration:none}
+.flip-back-cta:hover{background:rgba(255,255,255,.28)}
+.fc9 .flip-front{background:#fff;border-color:rgba(10,78,163,.18)}
+.fc9 .flip-norm{color:var(--navy)}
+.fc9 .flip-title{color:var(--navy)}
+.fc9 .flip-back{background:linear-gradient(135deg,#082A4D 0%,#0A4E9E 100%);border-color:rgba(10,78,163,.4)}
+.fc14 .flip-front{background:#fff;border-color:rgba(18,168,90,.2)}
+.fc14 .flip-norm{color:var(--grn)}
+.fc14 .flip-title{color:#0D5C3A}
+.fc14 .flip-back{background:linear-gradient(135deg,#064E3B 0%,#059669 100%);border-color:rgba(18,168,90,.4)}
+.fc50 .flip-front{background:#fff;border-color:rgba(245,158,11,.22)}
+.fc50 .flip-norm{color:var(--amb)}
+.fc50 .flip-title{color:#78350F}
+.fc50 .flip-back{background:linear-gradient(135deg,#451A03 0%,#D97706 100%);border-color:rgba(245,158,11,.4)}
+.fc31 .flip-front{background:#fff;border-color:rgba(194,24,74,.18)}
+.fc31 .flip-norm{color:var(--brg)}
+.fc31 .flip-title{color:#881337}
+.fc31 .flip-back{background:linear-gradient(135deg,#500724 0%,#BE185D 100%);border-color:rgba(194,24,74,.4)}
+
+/* ─── Process — Horizontal Pin ───────────────────── */
+#process-pin{position:relative}
+.process-sticky-outer{height:500vh}
+.process-sticky{position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;background:var(--bg2);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+.process-sticky::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(8,42,77,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.process-header{padding:0 40px 28px;flex-shrink:0;position:relative;z-index:2}
+.process-track-outer{flex:1;overflow:hidden;position:relative;z-index:2}
+.process-track{display:flex;width:max-content;will-change:transform}
+.proc-step-h{width:calc(100vw - 80px);padding:0 40px;flex-shrink:0;display:flex;align-items:center;gap:48px}
+.step-num-big{font-family:var(--serif);font-size:clamp(5rem,12vw,9rem);color:rgba(8,42,77,.06);line-height:1;flex-shrink:0;user-select:none;transition:color .4s}
+.step-num-big.active{color:rgba(10,78,163,.14)}
+.step-content{max-width:520px}
+.step-badge-proc{display:inline-flex;align-items:center;gap:8px;background:var(--nv3);border:1px solid rgba(10,78,163,.2);border-radius:100px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);margin-bottom:20px}
+.step-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--navy);animation:stepPulse 1.5s ease-in-out infinite;opacity:0}
+.step-badge-dot.active{opacity:1}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 0 rgba(10,78,163,.4)}50%{box-shadow:0 0 0 6px rgba(10,78,163,0)}}
+.step-title-big{font-family:var(--serif);font-size:clamp(1.8rem,3.2vw,2.8rem);color:var(--navy);margin-bottom:16px;line-height:1.15}
+.step-desc-big{font-size:16px;font-weight:300;color:var(--mu);line-height:1.75;margin-bottom:24px}
+.step-tags-h{display:flex;gap:8px;flex-wrap:wrap}
+.step-tag-h{font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;background:rgba(10,78,163,.07);color:var(--nv2);border:1px solid rgba(10,78,163,.15)}
+.proc-prog-bar{position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--navy),var(--grn),var(--amb),var(--brg));box-shadow:0 0 8px rgba(10,78,163,.3);transition:width .05s linear}
+@media(max-width:700px){.process-sticky-outer{height:auto}.process-sticky{position:relative;height:auto;padding:64px 0}.proc-step-h{width:calc(100vw - 48px);padding:0 24px}.process-header{padding:0 24px 24px}}
+
 /* ─── Industry Animations Section ───────────────── */
 #industries{padding:80px 24px;background:var(--bg2);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
 #industries .si{max-width:1200px;margin:0 auto}
@@ -1531,59 +1592,188 @@ footer::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
 </section>
 
 <!-- ══ LEISTUNGEN ══ -->
-<section id="leistungen" aria-labelledby="svc-h">
+<section id="leistungen" aria-labelledby="svc-h" style="padding:96px 24px">
   <div class="si">
-    <p class="sec-ew" id="svc-ew">Unsere Leistungen</p>
-    <h2 class="sec-ttl" id="svc-h">ISO Beratung für KMU: Vier Normen. Ein Ansprechpartner.</h2>
-    <p class="sec-sub" id="svc-sub">Wir bieten Ihnen das vollständige Spektrum des ISO-Managements — einzeln oder als integriertes System (IMS).</p>
-    <div class="svc-grid">
-      <article class="svc-card c9">
-        <div class="svc-ic" aria-hidden="true">📋</div>
-        <p class="svc-norm" id="s1n">ISO 9001 · Qualität</p>
-        <h3 id="s1t">ISO 9001 Qualitätsmanagement</h3>
-        <p class="svc-desc" id="s1d">Strukturierte Prozesse, messbare Ziele und eine Zertifizierung, die Kunden überzeugt und Ausschreibungen öffnet. Unsere ISO 9001 Beratung begleitet Sie vom ersten Tag bis zum Zertifikat.</p>
-        <div class="svc-tags"><span class="svc-tag">Prozessdokumentation</span><span class="svc-tag">Auditbegleitung</span><span class="svc-tag">KPIs</span></div>
-      </article>
-      <article class="svc-card c14">
-        <div class="svc-ic" aria-hidden="true">🌱</div>
-        <p class="svc-norm" id="s2n">ISO 14001 · Umwelt</p>
-        <h3 id="s2t">ISO 14001 Umweltmanagement</h3>
-        <p class="svc-desc" id="s2d">Umweltaspekte systematisch erfassen, Rechtskataster aufbauen und Ihre Nachhaltigkeitsstrategie zertifiziert belegen. ISO 14001 Beratung für KMU — praxisnah und normkonform.</p>
-        <div class="svc-tags"><span class="svc-tag">Umweltaspekte</span><span class="svc-tag">Rechtskataster</span><span class="svc-tag">ESG</span></div>
-      </article>
-      <article class="svc-card c50">
-        <div class="svc-ic" aria-hidden="true">⚡</div>
-        <p class="svc-norm" id="s3n">ISO 50001 · Energie</p>
-        <h3 id="s3t">ISO 50001 Energiemanagement</h3>
-        <p class="svc-desc" id="s3d">Energieverbrauch messen, SEEBs identifizieren, Kosten senken — und Förderungen (Spitzenausgleich, BAFA) voll ausschöpfen. ISO 50001 Beratung mit Förderkenntnissen aus der Praxis.</p>
-        <div class="svc-tags"><span class="svc-tag">EnPI / EnB</span><span class="svc-tag">Spitzenausgleich</span><span class="svc-tag">BAFA</span></div>
-      </article>
-      <article class="svc-card c31">
-        <div class="svc-ic" aria-hidden="true">🛡️</div>
-        <p class="svc-norm" id="s4n">ISO 31000 · Risiko</p>
-        <h3 id="s4t">ISO 31000 Risikomanagement</h3>
-        <p class="svc-desc" id="s4d">Ein integriertes Risikoregister, das alle ISO-Normen verbindet — und Ihre Geschäftsführung rechtlich absichert.</p>
-        <div class="svc-tags"><span class="svc-tag">Risikoregister</span><span class="svc-tag">IMS-Integration</span><span class="svc-tag">GF-Haftung</span></div>
-      </article>
+    <p class="sec-ew reveal-up" id="svc-ew">Leistungsportfolio</p>
+    <h2 class="sec-ttl reveal-up" id="svc-h">Vier Normen. Ein Ansprechpartner.<br><span style="font-style:italic;color:var(--mu);font-weight:300">Integriert. Praxisnah.</span></h2>
+    <p class="sec-sub reveal-up" id="svc-sub">Hover über eine Karte, um mehr zu sehen.</p>
+    <div class="flip-grid">
+
+      <div class="flip-wrap fc9 reveal-up">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <div class="flip-icon">📋</div>
+            <div>
+              <div class="flip-norm" id="s1n">ISO 9001 · Qualität</div>
+              <h3 class="flip-title" id="s1t">Qualitätsmanagementsystem</h3>
+              <p class="flip-hint">↻ Hover für Details</p>
+            </div>
+          </div>
+          <div class="flip-face flip-back">
+            <div>
+              <div class="flip-back-title">ISO 9001 — Was wir liefern</div>
+              <ul class="flip-points">
+                <li>GAP-Analyse &amp; Scope-Definition</li>
+                <li>Aufbau der Dokumentenstruktur</li>
+                <li>Prozessbeschreibungen &amp; KPIs</li>
+                <li>Internes Voraudit &amp; Stage-0</li>
+                <li>Begleitung bis zum Zertifikat</li>
+              </ul>
+            </div>
+            <a href="#kontakt" class="flip-back-cta">Anfragen →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-wrap fc14 reveal-up">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <div class="flip-icon">🌱</div>
+            <div>
+              <div class="flip-norm" id="s2n">ISO 14001 · Umwelt</div>
+              <h3 class="flip-title" id="s2t">Umweltmanagementsystem</h3>
+              <p class="flip-hint">↻ Hover für Details</p>
+            </div>
+          </div>
+          <div class="flip-face flip-back">
+            <div>
+              <div class="flip-back-title">ISO 14001 — Was wir liefern</div>
+              <ul class="flip-points">
+                <li>Umweltaspekte systematisch erfassen</li>
+                <li>Rechtskataster aufbauen</li>
+                <li>ESG-konforme Dokumentation</li>
+                <li>Kombination mit ISO 50001</li>
+                <li>Zertifizierungsbegleitung</li>
+              </ul>
+            </div>
+            <a href="#kontakt" class="flip-back-cta">Anfragen →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-wrap fc50 reveal-up">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <div class="flip-icon">⚡</div>
+            <div>
+              <div class="flip-norm" id="s3n">ISO 50001 · Energie</div>
+              <h3 class="flip-title" id="s3t">Energiemanagementsystem</h3>
+              <p class="flip-hint">↻ Hover für Details</p>
+            </div>
+          </div>
+          <div class="flip-face flip-back">
+            <div>
+              <div class="flip-back-title">ISO 50001 — Was wir liefern</div>
+              <ul class="flip-points">
+                <li>SEEB &amp; EnPI Aufbau</li>
+                <li>Energetische Basislinie</li>
+                <li>Spitzenausgleich &amp; BAFA</li>
+                <li>Kostenreduktion messbar</li>
+                <li>Kombination mit ISO 14001</li>
+              </ul>
+            </div>
+            <a href="#kontakt" class="flip-back-cta">Anfragen →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-wrap fc31 reveal-up">
+        <div class="flip-inner">
+          <div class="flip-face flip-front">
+            <div class="flip-icon">🛡️</div>
+            <div>
+              <div class="flip-norm" id="s4n">ISO 31000 · Risiko</div>
+              <h3 class="flip-title" id="s4t">Risikomanagementsystem</h3>
+              <p class="flip-hint">↻ Hover für Details</p>
+            </div>
+          </div>
+          <div class="flip-face flip-back">
+            <div>
+              <div class="flip-back-title">ISO 31000 — Was wir liefern</div>
+              <ul class="flip-points">
+                <li>Integriertes Risikoregister</li>
+                <li>GF-Haftungsschutz dokumentiert</li>
+                <li>8 Prinzipien implementiert</li>
+                <li>IMS-Backbone für alle Normen</li>
+                <li>Auditfeste Dokumentation</li>
+              </ul>
+            </div>
+            <a href="#kontakt" class="flip-back-cta">Anfragen →</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
 
 <!-- ══ PROZESS ══ -->
-<section class="process" id="vorgehen" aria-labelledby="proc-h">
-  <div class="si">
-    <p class="sec-ew" id="proc-ew">Unser Vorgehen</p>
-    <h2 class="sec-ttl" id="proc-h">ISO Zertifizierung: Von der GAP-Analyse zum Zertifikat</h2>
-    <p class="sec-sub" id="proc-sub">Unser erprobter Prozess als externer QMB — Managementsystem aufbauen, dokumentieren, intern prüfen und in 4 bis 8 Monaten zur ISO-Zertifizierung führen.</p>
-    <ol class="proc-steps" style="list-style:none">
-      <li class="proc-step"><div class="step-n" aria-hidden="true">1</div><h3 class="step-ttl" id="p1t">Analyse</h3><p class="step-desc" id="p1d">Selbstbewertung, GAP-Analyse und Scope-Definition. Was haben Sie, was fehlt?</p></li>
-      <li class="proc-step"><div class="step-n" aria-hidden="true">2</div><h3 class="step-ttl" id="p2t">Aufbau</h3><p class="step-desc" id="p2d">Prozesse, Dokumente, Ziele, Risikoregister — schlank und praxistauglich.</p></li>
-      <li class="proc-step"><div class="step-n" aria-hidden="true">3</div><h3 class="step-ttl" id="p3t">Implementierung</h3><p class="step-desc" id="p3d">Schulungen, interner Audit, Managementbewertung. Das System geht live — mit Ihrem Team als Träger.</p></li>
-      <li class="proc-step"><div class="step-n" aria-hidden="true">4</div><h3 class="step-ttl" id="p4t">Zertifizierung</h3><p class="step-desc" id="p4d">Begleitung durch Stage 1 und Stage 2. Zertifikat erhalten.</p></li>
-      <li class="proc-step"><div class="step-n" aria-hidden="true">5</div><h3 class="step-ttl" id="p5t">Betreuung</h3><p class="step-desc" id="p5d">Dauerhaftes Retainer-Paket — kein Aufwand für Sie, kein Risiko im Folgeaudit.</p></li>
-    </ol>
+<div id="process-pin" aria-labelledby="proc-h">
+  <div class="process-sticky-outer">
+    <div class="process-sticky" id="process-sticky">
+      <div class="process-header">
+        <p class="sec-ew" id="proc-ew">Unser Vorgehen</p>
+        <h2 class="sec-ttl" id="proc-h" style="margin-bottom:0">Von der GAP-Analyse zum Zertifikat</h2>
+      </div>
+      <div class="process-track-outer">
+        <div class="process-track" id="process-track">
+
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn0">01</div>
+            <div class="step-content">
+              <div class="step-badge-proc"><span class="step-badge-dot" id="sd0"></span>Phase 01</div>
+              <h3 class="step-title-big" id="p1t">Analyse &amp; GAP</h3>
+              <p class="step-desc-big" id="p1d">Wir erfassen Ihren Ist-Zustand, identifizieren Normabweichungen und definieren den exakten Scope.</p>
+              <div class="step-tags-h"><span class="step-tag-h">GAP-Analyse</span><span class="step-tag-h">Scope-Definition</span><span class="step-tag-h">Ist-Zustand</span></div>
+            </div>
+          </div>
+
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn1">02</div>
+            <div class="step-content">
+              <div class="step-badge-proc"><span class="step-badge-dot" id="sd1"></span>Phase 02</div>
+              <h3 class="step-title-big" id="p2t">Aufbau &amp; Dokumentation</h3>
+              <p class="step-desc-big" id="p2d">Prozesse, Dokumente, Ziele und Risikoregister — schlank, normkonform und praxistauglich.</p>
+              <div class="step-tags-h"><span class="step-tag-h">Dokumentenstruktur</span><span class="step-tag-h">Risikoregister</span><span class="step-tag-h">KPIs</span></div>
+            </div>
+          </div>
+
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn2">03</div>
+            <div class="step-content">
+              <div class="step-badge-proc"><span class="step-badge-dot" id="sd2"></span>Phase 03</div>
+              <h3 class="step-title-big" id="p3t">Implementierung &amp; Schulung</h3>
+              <p class="step-desc-big" id="p3d">Das System geht live — Schulungen, interner Audit und Managementbewertung machen Sie audit-ready.</p>
+              <div class="step-tags-h"><span class="step-tag-h">Team-Schulung</span><span class="step-tag-h">Interner Audit</span><span class="step-tag-h">MBW</span></div>
+            </div>
+          </div>
+
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn3">04</div>
+            <div class="step-content">
+              <div class="step-badge-proc"><span class="step-badge-dot" id="sd3"></span>Phase 04</div>
+              <h3 class="step-title-big" id="p4t">Zertifizierungsaudit</h3>
+              <p class="step-desc-big" id="p4d">Begleitung durch Stage 1 und Stage 2 beim akkreditierten Zertifizierer. Wir sind dabei — remote oder vor Ort.</p>
+              <div class="step-tags-h"><span class="step-tag-h">Stage 1 + 2</span><span class="step-tag-h">TÜV / DQS</span><span class="step-tag-h">Audit-Begleitung</span></div>
+            </div>
+          </div>
+
+          <div class="proc-step-h">
+            <div class="step-num-big" id="sn4">05</div>
+            <div class="step-content">
+              <div class="step-badge-proc"><span class="step-badge-dot" id="sd4"></span>Phase 05</div>
+              <h3 class="step-title-big" id="p5t">Dauerhafter Retainer</h3>
+              <p class="step-desc-big" id="p5d">Als externer QMB bleiben wir dauerhaft — kein Risiko, keine Überraschungen, kein Aufwand für Sie.</p>
+              <div class="step-tags-h"><span class="step-tag-h">Externer QMB</span><span class="step-tag-h">Ab 549 €/Mo</span><span class="step-tag-h">Langfristig</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="proc-prog-bar" id="proc-prog-bar" style="width:0%"></div>
+    </div>
   </div>
-</section>
+</div>
 
 <!-- ══ LEAD MAGNET ══ -->
 <div class="lm-strip">
@@ -3415,6 +3605,34 @@ checkHero();
     });
   });
 
+})();
+</script>
+
+<!-- ══ PROCESS HORIZONTAL SCROLL ══ -->
+<script>
+(function(){
+  const outer=document.querySelector('.process-sticky-outer');
+  const track=document.getElementById('process-track');
+  const progBar=document.getElementById('proc-prog-bar');
+  if(!outer||!track||!progBar)return;
+  const steps=5;
+  function update(){
+    const rect=outer.getBoundingClientRect();
+    const total=outer.offsetHeight-window.innerHeight;
+    const scrolled=-rect.top;
+    if(scrolled<0||scrolled>total)return;
+    const progress=scrolled/total;
+    track.style.transform=`translateX(-${progress*(window.innerWidth*(steps-1))}px)`;
+    progBar.style.width=(progress*100)+'%';
+    const active=Math.round(progress*(steps-1));
+    for(let i=0;i<steps;i++){
+      document.getElementById('sn'+i)?.classList.toggle('active',i===active);
+      document.getElementById('sd'+i)?.classList.toggle('active',i===active);
+    }
+  }
+  window.addEventListener('scroll',update,{passive:true});
+  window.addEventListener('resize',update,{passive:true});
+  update();
 })();
 </script>
 
