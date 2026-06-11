@@ -3754,7 +3754,7 @@ checkHero();
     shG.addColorStop(0,`rgba(200,230,255,${.06+coat*.04})`);shG.addColorStop(1,'rgba(200,230,255,0)');
     ctx.fillStyle=shG;ctx.fill();ctx.restore();
   }
-  // Blueprint sketch (cyan dashed lines) — shown during milling before solid frame appears
+  // Blueprint sketch (cyan dashed lines) — shown during early milling
   function drawBikeFrameSketch(cx,cy,s,alpha){
     ctx.save();ctx.globalAlpha=alpha??1;ctx.lineCap='round';ctx.lineJoin='round';
     const bb={x:0,y:s*.18},htb={x:s*.40,y:s*.12},htt={x:s*.36,y:-s*.18},stt={x:-s*.04,y:-s*.35},rd={x:-s*.42,y:s*.12},fwd={x:s*.48,y:s*.30};
@@ -3762,18 +3762,86 @@ checkHero();
     function l(a,b){ctx.beginPath();ctx.moveTo(cx+a.x,cy+a.y);ctx.lineTo(cx+b.x,cy+b.y);ctx.stroke();}
     l(bb,rd);l(stt,rd);l(htb,bb);l(bb,stt);l(htt,stt);l(htb,htt);l(htb,fwd);
     ctx.setLineDash([]);
-    // Dimension lines
     ctx.strokeStyle='rgba(80,200,255,.3)';ctx.lineWidth=.5;
     ctx.beginPath();ctx.moveTo(cx+rd.x-8,cy+rd.y);ctx.lineTo(cx+fwd.x+8,cy+fwd.y);ctx.stroke();
     ctx.beginPath();ctx.moveTo(cx+htt.x,cy+htt.y-8);ctx.lineTo(cx+bb.x,cy+bb.y+8);ctx.stroke();
-    // Node dots
     [bb,htb,htt,stt,rd,fwd].forEach(p=>{
-      ctx.beginPath();ctx.arc(cx+p.x,cy+p.y,2.8,0,Math.PI*2);
-      ctx.fillStyle='rgba(80,200,255,.9)';ctx.fill();
+      ctx.beginPath();ctx.arc(cx+p.x,cy+p.y,2.8,0,Math.PI*2);ctx.fillStyle='rgba(80,200,255,.9)';ctx.fill();
     });
-    // Tech label
     ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillStyle='rgba(80,200,255,.55)';
     ctx.fillText('FAHRRADRAHMEN AL6061',cx,cy-s*.48);
+    ctx.restore();
+  }
+
+  // Realistic milling morph: block carved progressively into bicycle frame tubes.
+  // mill 0=thick solid block-like, 1=thin finished tubes (hands off to drawBikeFrame)
+  function drawMillingTransform(cx,cy,s,mill){
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+    const bb={x:0,y:s*.18},htb={x:s*.40,y:s*.12},htt={x:s*.36,y:-s*.18};
+    const stt={x:-s*.04,y:-s*.35},rd={x:-s*.42,y:s*.12},fwd={x:s*.48,y:s*.30};
+    // machining progress: 0=raw block feel, 1=finished surface
+    const shine=mill*.45;
+    // tube widths: start very fat (block-like), thin to final frame size
+    const fatMain=s*(0.62-0.57*mill);  // down tube / seat tube
+    const fatTop =s*(0.55-0.50*mill);  // top tube
+    const fatThin=s*(0.48-0.44*mill);  // stays + fork
+    const fatHead=s*(0.68-0.62*mill);  // head tube (stays thickest longest)
+    const nodeR  =s*(0.12-0.06*mill);  // junction nodes
+
+    function tube(ax,ay,bx,by,w){
+      // Core body
+      ctx.beginPath();ctx.moveTo(cx+ax,cy+ay);ctx.lineTo(cx+bx,cy+by);
+      ctx.strokeStyle=alDk(shine,.95);ctx.lineWidth=w;ctx.stroke();
+      // Bright machined face (upper-left)
+      ctx.beginPath();ctx.moveTo(cx+ax-w*.18,cy+ay-w*.1);ctx.lineTo(cx+bx-w*.18,cy+by-w*.1);
+      ctx.strokeStyle=alBr(shine,.85);ctx.lineWidth=w*.38;ctx.stroke();
+      // Mid sheen
+      ctx.beginPath();ctx.moveTo(cx+ax+w*.08,cy+ay+w*.04);ctx.lineTo(cx+bx+w*.08,cy+by+w*.04);
+      ctx.strokeStyle=alC(shine,.65);ctx.lineWidth=w*.22;ctx.stroke();
+      // Fresh-cut micro-shimmer (only visible once milling has started)
+      if(mill>0.05){
+        ctx.beginPath();ctx.moveTo(cx+ax-w*.05,cy+ay+w*.18);ctx.lineTo(cx+bx-w*.05,cy+by+w*.18);
+        ctx.strokeStyle=`rgba(220,240,255,${mill*.18})`;ctx.lineWidth=w*.12;ctx.stroke();
+      }
+    }
+
+    // Draw from back to front (painter's order)
+    tube(bb.x,bb.y,rd.x,rd.y,   fatThin*.90); // chain stay
+    tube(stt.x,stt.y,rd.x,rd.y, fatThin*.82); // seat stay
+    tube(htb.x,htb.y,fwd.x,fwd.y,fatThin*.95);// fork blade
+    tube(htb.x,htb.y,bb.x,bb.y, fatMain*1.05);// down tube
+    tube(bb.x,bb.y,stt.x,stt.y, fatMain*.90); // seat tube
+    tube(htt.x,htt.y,stt.x,stt.y,fatTop*.85); // top tube
+    tube(htb.x,htb.y,htt.x,htt.y,fatHead);    // head tube
+
+    // Junction nodes (BB shell, head tube junctions, dropouts)
+    [[bb,nodeR*1.05],[htt,nodeR*.88],[htb,nodeR*.9],[stt,nodeR*.82],[rd,nodeR*.78],[fwd,nodeR*.72]].forEach(([p,r])=>{
+      ctx.beginPath();ctx.arc(cx+p.x,cy+p.y,r,0,Math.PI*2);
+      const g=ctx.createRadialGradient(cx+p.x-r*.3,cy+p.y-r*.3,r*.1,cx+p.x,cy+p.y,r);
+      g.addColorStop(0,alBr(shine));g.addColorStop(.5,alC(shine));g.addColorStop(1,alDk(shine));
+      ctx.fillStyle=g;ctx.fill();
+      ctx.strokeStyle=alC(shine,.6);ctx.lineWidth=.8;ctx.stroke();
+    });
+
+    // Freshly cut surface: bright ring around outer edge of each node
+    if(mill>0.1){
+      [[bb,nodeR*1.05],[htb,nodeR*.9],[htt,nodeR*.88],[stt,nodeR*.82],[rd,nodeR*.78]].forEach(([p,r])=>{
+        ctx.beginPath();ctx.arc(cx+p.x,cy+p.y,r,0,Math.PI*2);
+        ctx.strokeStyle=`rgba(200,230,255,${mill*.28})`;ctx.lineWidth=1.2;ctx.stroke();
+      });
+    }
+
+    // Material removal glint: small bright flashes on freshly cut face edges
+    if(mill>0.15&&mill<0.95){
+      const glintSeeds=[[htb,fwd],[bb,stt],[htt,stt]];
+      glintSeeds.forEach(([a,b],gi)=>{
+        const gf=((frameN*.07+gi*2.1)%1);
+        const gx2=cx+a.x+(b.x-a.x)*gf,gy2=cy+a.y+(b.y-a.y)*gf;
+        const sz=2+mill*3;
+        ctx.beginPath();ctx.arc(gx2,gy2,sz,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,255,255,${Math.sin(frameN*.15+gi)*mill*.4+mill*.2})`;ctx.fill();
+      });
+    }
     ctx.restore();
   }
   function drawBox(cx,cy,bW,bH,lidOpen,alpha){
@@ -3833,7 +3901,13 @@ checkHero();
     if(f<50){cx=(-wpW/2)+(sX[0]+wpW/2)*eio(f/50);}
     else if(f<90){cx=sX[0];}
     else if(f<130){cx=sX[0]+(sX[1]-sX[0])*eio((f-90)/40);}
-    else if(f<300){cx=sX[1];mill=(f-130)/170;frameAlpha=mill>0.65?clamp((mill-0.65)*2.86,0,1):0;fracPart+=18500000/(365*24*3600*60);if(f%5===0){const vi=Math.min(VOIDS.length-1,Math.floor(mill*VOIDS.length));const[vx,vw]=VOIDS[vi];const chX=cx-wpW/2+(vx+vw/2)*wpW+(Math.random()-.5)*8;const chY=wCY-wpH/2+(mill*VOIDS.length-vi)*wpH*(1-BASE_R);chips.push({x:chX,y:chY,vx:(Math.random()-.5)*4,vy:-2.5-Math.random()*3,life:1,sx:2+Math.random()*3.5,sy:.8+Math.random(),rot:Math.random()*Math.PI,rv:(Math.random()-.5)*.22});}}
+    else if(f<300){
+      cx=sX[1];mill=(f-130)/170;frameAlpha=0;
+      fracPart+=18500000/(365*24*3600*60);
+      // Emit chips from orbiting cutter position
+      const oA=frameN*.06,oR=frameSize*.60,cutXc=cx+Math.cos(oA)*oR,cutYc=wCY+Math.sin(oA)*oR*.62;
+      if(f%3===0){chips.push({x:cutXc+(Math.random()-.5)*10,y:cutYc+(Math.random()-.5)*6,vx:(Math.random()-.5)*4,vy:-1.8-Math.random()*2.5,life:1,sx:1.5+Math.random()*3,sy:.7+Math.random()*.8,rot:Math.random()*Math.PI,rv:(Math.random()-.5)*.2});}
+    }
     else if(f<340){cx=sX[1]+(sX[2]-sX[1])*eio((f-300)/40);mill=1;frameAlpha=1;}
     else if(f<460){cx=sX[2];mill=1;coat=(f-340)/120;frameAlpha=1;if(f%4===0){for(let k=0;k<3;k++){sprays.push({x:cx+(Math.random()-.5)*wpW*.8,y:wCY-wpH/2-5,vx:(Math.random()-.5)*2,vy:1.2+Math.random()*2.2,life:1,size:1.5+Math.random()*2.5,r:20+Math.random()*25,g:70+Math.random()*60,b:175+Math.random()*50});}}}
     else if(f<500){cx=sX[2];mill=1;coat=1;frameAlpha=1;}
@@ -3848,12 +3922,57 @@ checkHero();
       const el=document.getElementById('metall-counter');if(el)el.textContent='Teile verarbeitet: '+Math.floor(fracPart).toLocaleString('de-DE');
       return;
     }
-    if(frameAlpha<1)drawWP(cx,wCY,wpW,wpH,mill,coat,1-frameAlpha);
-    // Blueprint sketch: appears during milling (mill>0.12), fades out as solid frame materialises
-    if(f>=130&&f<300&&mill>0.12){const bpA=clamp((mill-0.12)*1.4,0,1)*(1-frameAlpha)*.8;if(bpA>0.01)drawBikeFrameSketch(cx,wCY,frameSize,bpA);}
-    if(frameAlpha>0)drawBikeFrame(cx,wCY,frameSize,coat,frameAlpha);
+    // === DRAW: phase-based rendering ===
+    if(f>=130&&f<300){
+      // MILLING PHASE: block → tube morph via drawMillingTransform
+      // Early (mill<0.28): still show raw block fading out + blueprint sketch
+      const blockFade=clamp(1-mill/0.28,0,1);
+      if(blockFade>0.01) drawWP(cx,wCY,wpW,wpH,Math.min(mill,.3),0,blockFade);
+      // Blueprint sketch visible during transition
+      const bpA=clamp((mill-0.08)/0.2,0,1)*clamp((0.45-mill)/0.18,0,1)*.75;
+      if(bpA>0.01) drawBikeFrameSketch(cx,wCY,frameSize,bpA);
+      // Milling transform: fades in as block fades, covers mill 0.2→1
+      const morphA=clamp((mill-0.18)/0.14,0,1);
+      if(morphA>0.01){ctx.save();ctx.globalAlpha=morphA;drawMillingTransform(cx,wCY,frameSize,mill);ctx.restore();}
+    } else {
+      // Outside milling: normal block or finished frame
+      if(frameAlpha<1) drawWP(cx,wCY,wpW,wpH,mill,coat,1-frameAlpha);
+      if(frameAlpha>0) drawBikeFrame(cx,wCY,frameSize,coat,frameAlpha);
+    }
     if(showBox)drawBox(cx,boxCY,wpW*.78,wpH*.62,boxLidOpen,1);
-    if(f>=90&&f<300&&frameAlpha<0.7){const vi=Math.min(VOIDS.length-1,Math.floor(mill*VOIDS.length));const[vx,vw]=VOIDS[vi];const cutX=cx-wpW/2+(vx+vw/2)*wpW;const cutY=wCY-wpH/2+(mill*VOIDS.length-vi)*wpH*(1-BASE_R);ctx.fillStyle='#151F2A';ctx.fillRect(cutX-4,wCY-wpH/2-H*.15,8,wCY-wpH/2-cutY+H*.15);const cG=ctx.createRadialGradient(cutX-3,cutY-3,1,cutX,cutY,10);cG.addColorStop(0,'#3A4E60');cG.addColorStop(1,'#0E161E');ctx.beginPath();ctx.arc(cutX,cutY,10,0,Math.PI*2);ctx.fillStyle=cG;ctx.fill();ctx.strokeStyle='rgba(100,170,220,.5)';ctx.lineWidth=1;ctx.stroke();for(let fl=0;fl<4;fl++){const fa=fl*Math.PI/2+frameN*.25;ctx.save();ctx.translate(cutX,cutY);ctx.rotate(fa);ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(8.5,0);ctx.strokeStyle='rgba(140,210,255,.55)';ctx.lineWidth=1.4;ctx.stroke();ctx.restore();}}
+    // === MILLING CUTTER: orbits the workpiece ===
+    if(f>=90&&f<130){
+      // Still approaching: show cutter waiting above stage 2
+      const cutX=sX[1],cutY=wCY-wpH/2-H*.12;
+      ctx.fillStyle='#151F2A';ctx.fillRect(cutX-4,0,8,cutY+H*.12);
+      const cG=ctx.createRadialGradient(cutX-3,cutY-3,1,cutX,cutY,10);cG.addColorStop(0,'#3A4E60');cG.addColorStop(1,'#0E161E');
+      ctx.beginPath();ctx.arc(cutX,cutY,10,0,Math.PI*2);ctx.fillStyle=cG;ctx.fill();
+      ctx.strokeStyle='rgba(100,170,220,.5)';ctx.lineWidth=1;ctx.stroke();
+    }
+    if(f>=130&&f<300){
+      // Orbiting CNC milling cutter
+      const oA=frameN*.06,oR=frameSize*.60;
+      const cutX=cx+Math.cos(oA)*oR,cutY=wCY+Math.sin(oA)*oR*.62;
+      // Spindle arm from top
+      ctx.save();
+      ctx.strokeStyle='rgba(30,60,90,.7)';ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(cutX,0);ctx.lineTo(cutX,cutY-10);ctx.stroke();
+      ctx.strokeStyle='rgba(60,120,180,.4)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cutX,0);ctx.lineTo(cutX,cutY-10);ctx.stroke();
+      // Cutter body
+      const cG=ctx.createRadialGradient(cutX-3,cutY-3,1,cutX,cutY,10);
+      cG.addColorStop(0,'#3A4E60');cG.addColorStop(1,'#0E161E');
+      ctx.beginPath();ctx.arc(cutX,cutY,10,0,Math.PI*2);ctx.fillStyle=cG;ctx.fill();
+      ctx.strokeStyle='rgba(100,170,220,.5)';ctx.lineWidth=1;ctx.stroke();
+      // Rotating flutes
+      for(let fl=0;fl<4;fl++){const fa=fl*Math.PI/2+frameN*.35;ctx.save();ctx.translate(cutX,cutY);ctx.rotate(fa);ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(9,0);ctx.strokeStyle='rgba(140,210,255,.6)';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();}
+      // Cutting sparks / heat glow
+      ctx.beginPath();ctx.arc(cutX,cutY,12+Math.sin(frameN*.4)*2,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(60,180,255,${.08+mill*.06})`;ctx.lineWidth=3;ctx.stroke();
+      // Coolant spray (small dots)
+      if(mill>0.2&&f%2===0){ctx.save();ctx.globalAlpha=.5;ctx.fillStyle='rgba(180,220,255,.6)';ctx.beginPath();ctx.arc(cutX+(Math.random()-.5)*8,cutY+4+Math.random()*6,1+Math.random(),0,Math.PI*2);ctx.fill();ctx.restore();}
+      ctx.restore();
+    }
     if(f>=300&&f<500&&frameAlpha>0.4){const gunX=cx+(Math.sin(frameN*.045)*wpW*.38),gunY=wCY-wpH*.35-18;ctx.fillStyle='#1A2530';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(gunX-4,gunY-20,8,18,2);else ctx.rect(gunX-4,gunY-20,8,18);ctx.fill();ctx.fillStyle='#253540';ctx.beginPath();ctx.moveTo(gunX-7,gunY-2);ctx.lineTo(gunX+7,gunY-2);ctx.lineTo(gunX+5,gunY+2);ctx.lineTo(gunX-5,gunY+2);ctx.closePath();ctx.fill();if(f>=340&&f<460){const coneG=ctx.createRadialGradient(gunX,gunY+4,0,gunX,gunY+4,22);coneG.addColorStop(0,`rgba(30,100,220,${coat*.25})`);coneG.addColorStop(1,'rgba(30,100,220,0)');ctx.fillStyle=coneG;ctx.beginPath();ctx.arc(gunX,gunY+4,22,0,Math.PI*2);ctx.fill();}}
     for(let i=chips.length-1;i>=0;i--){const c=chips[i];c.vy+=.08;c.x+=c.vx;c.y+=c.vy;c.vx*=.97;c.life-=.023;c.rot+=c.rv;if(c.life<=0||c.y>H){chips.splice(i,1);continue;}ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.globalAlpha=c.life*.72;const cg=ctx.createLinearGradient(-c.sx,0,c.sx,0);cg.addColorStop(0,'#7A9AAC');cg.addColorStop(.5,'#C8DCEC');cg.addColorStop(1,'#8AAABB');ctx.beginPath();ctx.ellipse(0,0,c.sx,c.sy,0,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();ctx.globalAlpha=1;ctx.restore();}
     for(let i=sprays.length-1;i>=0;i--){const s=sprays[i];s.vy+=.06;s.x+=s.vx;s.y+=s.vy;s.life-=.04;if(s.life<=0||s.y>wCY+wpH/2){sprays.splice(i,1);continue;}ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fillStyle=`rgba(${s.r},${s.g},${s.b},${s.life*.65})`;ctx.fill();}
