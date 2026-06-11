@@ -788,272 +788,368 @@ function startTypewriter(){
   window.addEventListener('resize', () => { if(active) resize(); }, { passive: true });
 })();
 
-// ── 8. METALLVERARBEITUNG SPARKS + GEARS ─────
+// ── 8. METALLVERARBEITUNG — ALUMINIUM CNC ────
 (function(){
   const canvas = document.getElementById('canvas-metall');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W, H, animId = null, active = false;
-  let partCount = 0, frameN = 0;
-  const sparks = [];
-  let gearAngle = 0;
+  let W, H, animId=null, active=false, frameN=0, partCount=0;
+  let toolX=0, toolY=0, toolTX=0, toolTY=0;
+  let passDir=1, passY=0, machinedY=0, initialized=false;
+  let pathPts=[], chips=[], rpmVis=0;
+  const PASS_GAP=14, TOOL_R=12, FLUTES=4;
 
-  class Spark {
-    constructor(x, y) {
-      this.x = x; this.y = y; this.px = x; this.py = y;
-      const a = -Math.PI/2 + (Math.random()-0.5)*2.0;
-      const sp = Math.random()*7+2;
-      this.vx = Math.cos(a)*sp*(Math.random()>.5?1.2:.7);
-      this.vy = Math.sin(a)*sp - 1;
-      this.life = 1; this.decay = 0.018 + Math.random()*.025;
-      const palette = ['#FF6B00','#FFA040','#FFD000','#FF3000','#FFFFFF'];
-      this.color = palette[Math.floor(Math.random()*palette.length)];
-      this.size = Math.random()*1.5+0.5;
-      this.gravity = 0.12 + Math.random()*0.08;
+  class Chip {
+    constructor(x,y){
+      this.x=x; this.y=y;
+      const a=Math.random()*Math.PI*2, sp=Math.random()*3.5+1;
+      this.vx=Math.cos(a)*sp; this.vy=Math.sin(a)*sp-1.8;
+      this.life=1; this.rot=Math.random()*Math.PI; this.rv=(Math.random()-.5)*.18;
+      this.sx=Math.random()*5+2; this.sy=Math.random()*2+1;
     }
-    update() {
-      this.px=this.x; this.py=this.y;
-      this.vy += this.gravity; this.x+=this.vx; this.y+=this.vy;
-      this.vx*=0.97; this.life-=this.decay;
-    }
-    draw(ctx) {
-      const a = this.life;
-      ctx.beginPath(); ctx.moveTo(this.px,this.py); ctx.lineTo(this.x,this.y);
-      ctx.strokeStyle=this.color+Math.round(a*200).toString(16).padStart(2,'0');
-      ctx.lineWidth=this.size; ctx.lineCap='round'; ctx.stroke();
-      ctx.beginPath(); ctx.arc(this.x,this.y,this.size*.8,0,Math.PI*2);
-      ctx.fillStyle='#FFF'+Math.round(a*220).toString(16).padStart(2,'0'); ctx.fill();
+    update(){ this.vy+=.09; this.x+=this.vx; this.y+=this.vy; this.vx*=.97; this.life-=.02; this.rot+=this.rv; }
+    draw(){
+      ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+      ctx.globalAlpha=this.life*.75;
+      ctx.beginPath(); ctx.ellipse(0,0,this.sx,this.sy,0,0,Math.PI*2);
+      const g=ctx.createLinearGradient(-this.sx,0,this.sx,0);
+      g.addColorStop(0,'#6A8090'); g.addColorStop(.45,'#C4D8E8'); g.addColorStop(1,'#8AACBC');
+      ctx.fillStyle=g; ctx.fill();
+      ctx.strokeStyle='rgba(200,225,245,0.25)'; ctx.lineWidth=.4; ctx.stroke();
+      ctx.globalAlpha=1; ctx.restore();
     }
   }
 
-  function drawGear(cx, cy, outerR, innerR, teeth, rot, color, alpha) {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    for(let i=0; i<teeth; i++){
-      const base = (i/teeth)*Math.PI*2;
-      const half = Math.PI/teeth*0.35;
-      ctx.lineTo(Math.cos(base-half)*innerR, Math.sin(base-half)*innerR);
-      ctx.lineTo(Math.cos(base-half*.5)*outerR, Math.sin(base-half*.5)*outerR);
-      ctx.lineTo(Math.cos(base+half*.5)*outerR, Math.sin(base+half*.5)*outerR);
-      ctx.lineTo(Math.cos(base+half)*innerR, Math.sin(base+half)*innerR);
-    }
-    ctx.closePath();
-    ctx.fillStyle = color; ctx.fill();
-    ctx.strokeStyle='rgba(255,200,50,0.2)'; ctx.lineWidth=1; ctx.stroke();
-    ctx.beginPath(); ctx.arc(0,0,innerR*.45,0,Math.PI*2);
-    ctx.fillStyle='rgba(30,20,0,0.8)'; ctx.fill();
-    ctx.strokeStyle='rgba(255,150,30,0.3)'; ctx.stroke();
-    ctx.globalAlpha=1; ctx.restore();
+  function resize(){
+    const r=canvas.parentElement.getBoundingClientRect();
+    W=canvas.width=r.width; H=canvas.height=r.height;
+  }
+  const WPL=()=>W*.08, WPT=()=>H*.12, WPR=()=>W*.66, WPB=()=>H*.88;
+
+  function init(){
+    passY=WPT()+PASS_GAP; passDir=1; machinedY=WPT();
+    toolX=WPL()+6; toolY=passY; toolTX=WPR()-6; toolTY=passY;
+    pathPts=[]; chips=[]; initialized=true;
   }
 
-  function resize() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    W = canvas.width = rect.width; H = canvas.height = rect.height;
-  }
+  function draw(){
+    animId=requestAnimationFrame(draw); frameN++;
+    if(!initialized) init();
+    ctx.clearRect(0,0,W,H);
 
-  const weldX = () => W * 0.3, weldY = () => H * 0.62;
+    // Engineering blueprint background
+    ctx.fillStyle='#070C14'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(30,70,120,.18)'; ctx.lineWidth=.5;
+    for(let x=0;x<W;x+=20){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=20){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // Axis marks
+    ctx.strokeStyle='rgba(60,130,200,.12)'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(WPL()-8,WPT());ctx.lineTo(WPL()-8,WPB());ctx.stroke();
+    ctx.beginPath();ctx.moveTo(WPL(),WPB()+8);ctx.lineTo(WPR(),WPB()+8);ctx.stroke();
 
-  function draw() {
-    animId = requestAnimationFrame(draw);
-    frameN++;
-    ctx.clearRect(0, 0, W, H);
+    const wL=WPL(),wT=WPT(),wR=WPR(),wB=WPB(),wW=wR-wL,wH=wB-wT;
 
-    // Dark metal background gradient
-    const bg = ctx.createRadialGradient(weldX(),weldY(),0,weldX(),weldY(),W*.8);
-    bg.addColorStop(0,'rgba(60,25,0,0.4)');
-    bg.addColorStop(0.3,'rgba(20,10,0,0.3)');
-    bg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-
-    // Metal surface lines
-    ctx.strokeStyle='rgba(80,80,90,0.06)'; ctx.lineWidth=1;
-    for(let y=0;y<H;y+=8){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-    // Draw gears
-    const gr = Math.min(W,H) * 0.22;
-    drawGear(W*.7, H*.38, gr, gr*.75, 16, gearAngle, 'rgba(50,55,65,0.7)', 0.9);
-    drawGear(W*.7 + gr*.75 + gr*.75*.75*.5, H*.38 - gr*.75*.5, gr*.55, gr*.55*.75, 11, -gearAngle*(16/11)+Math.PI/11, 'rgba(45,50,60,0.65)', 0.8);
-    gearAngle += 0.008;
-
-    // Welding glow
-    const glow = ctx.createRadialGradient(weldX(),weldY(),0,weldX(),weldY(),55+Math.sin(frameN*.18)*8);
-    glow.addColorStop(0,'rgba(255,180,0,0.55)');
-    glow.addColorStop(0.3,'rgba(255,100,0,0.25)');
-    glow.addColorStop(1,'rgba(255,50,0,0)');
-    ctx.beginPath(); ctx.arc(weldX(),weldY(),55+Math.sin(frameN*.18)*8,0,Math.PI*2);
-    ctx.fillStyle=glow; ctx.fill();
-
-    // Welding arc flicker
-    if(frameN%3===0){
-      ctx.beginPath(); ctx.arc(weldX(),weldY(),4+Math.random()*3,0,Math.PI*2);
-      ctx.fillStyle=`rgba(255,255,200,${0.7+Math.random()*.3})`; ctx.fill();
+    // Unmachined aluminum surface
+    const rawG=ctx.createLinearGradient(wL,wT,wL,wB);
+    rawG.addColorStop(0,'#6E8494'); rawG.addColorStop(.5,'#8CA0AE'); rawG.addColorStop(1,'#607080');
+    ctx.fillStyle=rawG; ctx.fillRect(wL,wT,wW,wH);
+    // Brushed aluminum striation on raw area
+    for(let sy=wT+3;sy<wB;sy+=6){
+      ctx.beginPath();ctx.moveTo(wL,sy);ctx.lineTo(wR,sy);
+      ctx.strokeStyle=`rgba(255,255,255,${.03+Math.random()*.02})`;ctx.lineWidth=.5;ctx.stroke();
     }
 
-    // Emit sparks
-    const burstSize = 2 + Math.floor(Math.sin(frameN*.04)*2+3);
-    for(let i=0;i<burstSize;i++) sparks.push(new Spark(weldX()+Math.random()*8-4, weldY()+Math.random()*4-2));
-
-    // Update & draw sparks
-    for(let i=sparks.length-1;i>=0;i--){
-      sparks[i].update();
-      if(sparks[i].life<=0||sparks[i].y>H||sparks[i].x<0||sparks[i].x>W){sparks.splice(i,1);}
-      else sparks[i].draw(ctx);
+    // Machined area (progressive, brighter mirror finish)
+    if(machinedY>wT){
+      const mH=Math.min(machinedY,wB)-wT;
+      const mG=ctx.createLinearGradient(wL,wT,wR,wT+mH);
+      mG.addColorStop(0,'#AABCCC'); mG.addColorStop(.25,'#D8EAF4'); mG.addColorStop(.5,'#C0D4E0'); mG.addColorStop(.75,'#B0C8D8'); mG.addColorStop(1,'#98B0C0');
+      ctx.fillStyle=mG; ctx.fillRect(wL,wT,wW,mH);
+      // Machining striae
+      for(let sy=wT+PASS_GAP;sy<Math.min(machinedY,wB);sy+=PASS_GAP){
+        ctx.beginPath();ctx.moveTo(wL,sy);ctx.lineTo(wR,sy);
+        ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=.7;ctx.stroke();
+      }
+      // Mirror highlight band
+      const hg=ctx.createLinearGradient(wL,wT,wL+wW*.4,wT);
+      hg.addColorStop(0,'rgba(255,255,255,0)');
+      hg.addColorStop(.35,'rgba(255,255,255,0.12)');
+      hg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=hg; ctx.fillRect(wL,wT,wW,mH);
     }
 
-    // Parts counter
-    if(frameN%18===0) partCount++;
-    const el = document.getElementById('metall-counter');
-    if(el) el.textContent='Teile geprüft: '+partCount.toLocaleString('de-DE');
+    // Workpiece border
+    ctx.strokeStyle='rgba(180,210,235,.7)';ctx.lineWidth=1.5;ctx.strokeRect(wL,wT,wW,wH);
+    ctx.fillStyle='rgba(220,245,255,.1)';ctx.fillRect(wL,wT,wW,2);ctx.fillRect(wL,wT,2,wH);
+    // Material label
+    ctx.font='bold 8px monospace';ctx.fillStyle='rgba(80,150,210,.55)';ctx.textAlign='left';
+    ctx.fillText('AL 6061-T6 · Toleranz ±0.02mm',wL+4,wB-5);
 
-    // Scan line
-    const scanY = (frameN * 2) % (H + 20) - 10;
-    const scanG = ctx.createLinearGradient(0, scanY-3, 0, scanY+3);
-    scanG.addColorStop(0,'rgba(255,200,50,0)');
-    scanG.addColorStop(0.5,'rgba(255,200,50,0.08)');
-    scanG.addColorStop(1,'rgba(255,200,50,0)');
-    ctx.fillStyle=scanG; ctx.fillRect(0,scanY-3,W,6);
+    // Move tool
+    const dx=toolTX-toolX,dy=toolTY-toolY,dist=Math.sqrt(dx*dx+dy*dy),speed=1.6;
+    if(dist>speed){
+      toolX+=dx/dist*speed; toolY+=dy/dist*speed;
+      if(frameN%3===0&&toolY>=wT&&toolY<=wB&&toolX>=wL&&toolX<=wR){
+        chips.push(new Chip(toolX,toolY));
+        if(frameN%40===0) partCount++;
+      }
+    } else {
+      toolX=toolTX; toolY=toolTY;
+      machinedY=Math.max(machinedY,toolY);
+      passY+=PASS_GAP;
+      if(passY>wB-4){ passY=wT+PASS_GAP; machinedY=wT; passDir=1; toolX=wL+6; toolY=passY; partCount++; }
+      passDir*=-1;
+      toolTX=passDir>0?wR-6:wL+6; toolTY=passY;
+    }
+
+    // Tool path trail
+    pathPts.push({x:toolX,y:toolY});
+    if(pathPts.length>60) pathPts.shift();
+    if(pathPts.length>1){
+      ctx.beginPath();ctx.moveTo(pathPts[0].x,pathPts[0].y);
+      pathPts.forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.strokeStyle='rgba(80,170,255,.2)';ctx.lineWidth=1;ctx.stroke();
+    }
+
+    // Chips
+    for(let i=chips.length-1;i>=0;i--){ chips[i].update(); if(chips[i].life<=0)chips.splice(i,1); else chips[i].draw(); }
+
+    // Milling cutter
+    ctx.beginPath();ctx.arc(toolX+2,toolY+2,TOOL_R,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,.35)';ctx.fill();
+    const tG=ctx.createRadialGradient(toolX-3,toolY-3,1,toolX,toolY,TOOL_R);
+    tG.addColorStop(0,'#3A4A58');tG.addColorStop(1,'#101820');
+    ctx.beginPath();ctx.arc(toolX,toolY,TOOL_R,0,Math.PI*2);
+    ctx.fillStyle=tG;ctx.fill();
+    ctx.strokeStyle='rgba(120,180,220,.5)';ctx.lineWidth=1;ctx.stroke();
+    // Flutes
+    const fr=frameN*.22;
+    for(let f=0;f<FLUTES;f++){
+      const fa=fr+f*Math.PI/2;
+      ctx.save();ctx.translate(toolX,toolY);ctx.rotate(fa);
+      ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(TOOL_R*.85,0);
+      ctx.strokeStyle='rgba(160,210,255,.55)';ctx.lineWidth=1.4;ctx.stroke();
+      ctx.restore();
+    }
+    ctx.beginPath();ctx.arc(toolX,toolY,2.2,0,Math.PI*2);
+    ctx.fillStyle='rgba(200,235,255,.9)';ctx.fill();
+    // Cutting glow
+    ctx.beginPath();ctx.arc(toolX,toolY,TOOL_R+2+Math.sin(frameN*.25)*.8,0,Math.PI*2);
+    ctx.strokeStyle='rgba(80,190,255,.12)';ctx.lineWidth=2.5;ctx.stroke();
+
+    // HUD panel
+    rpmVis+=(14500-rpmVis)*.04;
+    const hx=WPR()+14, hy=WPT();
+    const hudW=W-hx-6;
+    const hud=[
+      {k:'SPINDEL',v:Math.round(rpmVis).toLocaleString('de-DE')+' rpm',c:'#60C8FF'},
+      {k:'VORSCHUB',v:'640 mm/min',c:'#60C8FF'},
+      {k:'ZUSTELLUNG',v:'0.4 mm',c:'#60C8FF'},
+      {k:'WERKZEUG',v:'VHM Ø24',c:'#A8D8FF'},
+      {k:'RAUHEIT Ra',v:'0.6 μm',c:'#50FFB0'},
+      {k:'TOLERANZ',v:'±0.02 mm',c:'#50FFB0'},
+      {k:'STATUS',v:'IN SPEC ✓',c:'#50FFB0'},
+    ];
+    hud.forEach((item,i)=>{
+      const y=hy+i*26;
+      ctx.fillStyle='rgba(0,20,45,.65)';
+      ctx.beginPath();if(ctx.roundRect)ctx.roundRect(hx,y,hudW,20,3);else ctx.rect(hx,y,hudW,20);ctx.fill();
+      ctx.fillStyle='rgba(40,100,180,.5)';ctx.fillRect(hx,y,2.5,20);
+      ctx.font='bold 8px monospace';ctx.textAlign='left';
+      ctx.fillStyle='rgba(90,150,200,.55)';ctx.fillText(item.k,hx+7,y+13);
+      ctx.fillStyle=item.c;ctx.textAlign='right';ctx.fillText(item.v,hx+hudW-5,y+13);
+    });
+
+    const el=document.getElementById('metall-counter');
+    if(el) el.textContent='Teile gefräst: '+partCount.toLocaleString('de-DE');
   }
 
-  function start(){ if(!active){ active=true; resize(); draw(); } }
-  function stop(){ if(animId){ cancelAnimationFrame(animId); animId=null; active=false; } }
-  const obs = new IntersectionObserver(e=>{ e[0].isIntersecting?start():stop(); },{threshold:0.1});
+  function start(){ if(!active){active=true;initialized=false;chips=[];pathPts=[];resize();draw();} }
+  function stop(){ if(animId){cancelAnimationFrame(animId);animId=null;active=false;} }
+  const obs=new IntersectionObserver(e=>{ e[0].isIntersecting?start():stop(); },{threshold:0.1});
   obs.observe(canvas.parentElement);
-  window.addEventListener('resize',()=>{ if(active)resize(); },{passive:true});
+  window.addEventListener('resize',()=>{ if(active){resize();initialized=false;pathPts=[];chips=[];} },{passive:true});
 })();
 
-// ── 9. LOGISTIK GERMANY MAP ──────────────────
+// ── 9. LOGISTIK EUROPE MAP ───────────────────
 (function(){
   const canvas = document.getElementById('canvas-logistik');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W, H, animId=null, active=false, shipCount=0;
+  let W, H, animId=null, active=false, shipCount=0, frameN=0;
 
-  // Germany outline — approximate polygon (normalized 0..1)
-  const outline = [
-    {x:.47,y:.01},{x:.52,y:.02},{x:.58,y:.03},{x:.66,y:.06},{x:.72,y:.08},
-    {x:.76,y:.11},{x:.78,y:.16},{x:.74,y:.2},{x:.76,y:.25},{x:.82,y:.27},
-    {x:.86,y:.32},{x:.84,y:.37},{x:.78,y:.4},{x:.8,y:.46},{x:.82,y:.52},
-    {x:.78,y:.56},{x:.72,y:.58},{x:.7,y:.64},{x:.66,y:.7},{x:.62,y:.75},
-    {x:.6,y:.82},{x:.55,y:.88},{x:.5,y:.93},{x:.44,y:.92},{x:.38,y:.88},
-    {x:.33,y:.82},{x:.3,y:.76},{x:.26,y:.7},{x:.2,y:.65},{x:.16,y:.58},
-    {x:.14,y:.52},{x:.18,y:.46},{x:.22,y:.42},{x:.2,y:.36},{x:.16,y:.3},
-    {x:.18,y:.24},{x:.22,y:.2},{x:.26,y:.15},{x:.3,y:.1},{x:.36,y:.06},
-    {x:.42,y:.02},{x:.47,y:.01}
+  // Simplified Europe outline (clockwise, normalized 0..1)
+  // Covers W Europe, Scandinavia, Eastern Europe, Mediterranean
+  const europeOutline = [
+    {x:.39,y:.01},  // North Norway
+    {x:.52,y:.04},  // Norway-Russia border
+    {x:.64,y:.08},  // Finland N
+    {x:.70,y:.16},  // Gulf of Finland
+    {x:.67,y:.24},  // Estonia/Latvia coast
+    {x:.62,y:.30},  // Lithuania / Poland coast
+    {x:.52,y:.31},  // Poland-Germany coast
+    {x:.47,y:.33},  // Germany NE coast
+    {x:.44,y:.29},  // Denmark (Jutland)
+    {x:.41,y:.33},  // Denmark south
+    {x:.37,y:.35},  // Netherlands
+    {x:.31,y:.41},  // Belgium / N France
+    {x:.22,y:.44},  // Brittany
+    {x:.19,y:.52},  // France W coast
+    {x:.19,y:.62},  // Bay of Biscay
+    {x:.13,y:.68},  // N Portugal / Galicia
+    {x:.10,y:.76},  // Portugal SW
+    {x:.14,y:.85},  // Spain S
+    {x:.23,y:.87},  // Gibraltar
+    {x:.32,y:.81},  // Spain E coast
+    {x:.37,y:.77},  // French Riviera
+    {x:.42,y:.73},  // Italy NW (Genoa)
+    {x:.43,y:.83},  // Italy W coast
+    {x:.47,y:.91},  // Italy toe
+    {x:.52,y:.87},  // Italy heel (Puglia)
+    {x:.50,y:.76},  // Adriatic coast
+    {x:.54,y:.79},  // Croatia / Albania
+    {x:.57,y:.88},  // Greece W
+    {x:.60,y:.94},  // Greece S (Cape Matapan)
+    {x:.62,y:.87},  // Greece NE
+    {x:.65,y:.80},  // Turkey W coast
+    {x:.67,y:.72},  // Turkey NW / Bulgaria
+    {x:.69,y:.63},  // Romania / Black Sea
+    {x:.74,y:.56},  // Ukraine coast
+    {x:.82,y:.44},  // Russia S
+    {x:.84,y:.34},  // Russia central
+    {x:.78,y:.24},  // St. Petersburg area
+    {x:.72,y:.14},  // Finland E coast
+    {x:.62,y:.06},  // Norway-Russia E
+    {x:.39,y:.01},  // Close
   ];
 
+  // Major European logistics hubs
   const cities = {
-    Hamburg: {x:.41,y:.11,label:'HH'},
-    Berlin:  {x:.66,y:.16,label:'B'},
-    Hannover:{x:.42,y:.24,label:'H'},
-    Dortmund:{x:.23,y:.34,label:'DO'},
-    Leipzig: {x:.57,y:.35,label:'L'},
-    Köln:    {x:.2,y:.43,label:'K'},
-    Frankfurt:{x:.35,y:.51,label:'F'},
-    Nürnberg:{x:.53,y:.6,label:'N'},
-    Stuttgart:{x:.37,y:.68,label:'S'},
-    München: {x:.55,y:.77,label:'M'},
+    Hamburg:    {x:.44,y:.32,l:'HH',  clr:'#3B82F6'},
+    Berlin:     {x:.54,y:.33,l:'B',   clr:'#3B82F6'},
+    Frankfurt:  {x:.42,y:.44,l:'F',   clr:'#F59E0B'},
+    München:    {x:.48,y:.53,l:'M',   clr:'#3B82F6'},
+    Wien:       {x:.57,y:.52,l:'W',   clr:'#10B981'},
+    Zürich:     {x:.41,y:.53,l:'ZH',  clr:'#10B981'},
+    Paris:      {x:.28,y:.49,l:'PAR', clr:'#F43F5E'},
+    Amsterdam:  {x:.33,y:.36,l:'AMS', clr:'#3B82F6'},
+    Brüssel:    {x:.32,y:.42,l:'BRU', clr:'#F43F5E'},
+    Warschau:   {x:.61,y:.37,l:'WAW', clr:'#A78BFA'},
+    Prag:       {x:.52,y:.40,l:'PRG', clr:'#A78BFA'},
+    Budapest:   {x:.58,y:.50,l:'BUD', clr:'#A78BFA'},
+    Mailand:    {x:.41,y:.64,l:'MIL', clr:'#10B981'},
+    Madrid:     {x:.21,y:.72,l:'MAD', clr:'#F43F5E'},
+    Stockholm:  {x:.54,y:.19,l:'STO', clr:'#60C0FF'},
+    Kopenhagen: {x:.46,y:.27,l:'CPH', clr:'#60C0FF'},
   };
 
   const routes = [
-    ['Hamburg','Berlin'],['Hamburg','Hannover'],['Berlin','Leipzig'],['Hannover','Dortmund'],
-    ['Hannover','Leipzig'],['Dortmund','Köln'],['Dortmund','Frankfurt'],['Köln','Frankfurt'],
-    ['Frankfurt','Nürnberg'],['Frankfurt','Stuttgart'],['Nürnberg','München'],
-    ['Stuttgart','München'],['Leipzig','Nürnberg'],['Leipzig','Berlin'],
+    ['Hamburg','Amsterdam'],['Hamburg','Berlin'],['Hamburg','Kopenhagen'],
+    ['Berlin','Warschau'],['Berlin','Prag'],['Berlin','Frankfurt'],
+    ['Frankfurt','Paris'],['Frankfurt','Brüssel'],['Frankfurt','München'],['Frankfurt','Prag'],
+    ['München','Wien'],['München','Zürich'],['München','Mailand'],
+    ['Wien','Budapest'],['Wien','Prag'],
+    ['Paris','Brüssel'],['Paris','Madrid'],['Paris','Mailand'],
+    ['Stockholm','Kopenhagen'],['Kopenhagen','Hamburg'],
+    ['Brüssel','Amsterdam'],['Warschau','Budapest'],['Zürich','Mailand'],
   ];
 
   const pkgs = [];
-  const cityNames = Object.keys(cities);
 
-  function spawnPkg() {
-    const r = routes[Math.floor(Math.random()*routes.length)];
-    const flip = Math.random() > 0.5;
-    pkgs.push({
-      from: cities[flip?r[1]:r[0]], to: cities[flip?r[0]:r[1]],
-      t: 0, speed: 0.004 + Math.random()*.003,
-      color: ['#3B82F6','#10B981','#F59E0B','#F43F5E','#A78BFA'][Math.floor(Math.random()*5)],
-      size: 4 + Math.random()*3
-    });
+  function spawnPkg(){
+    const r=routes[Math.floor(Math.random()*routes.length)];
+    const flip=Math.random()>.5;
+    const from=cities[flip?r[1]:r[0]], to=cities[flip?r[0]:r[1]];
+    pkgs.push({ from, to, t:0, speed:.003+Math.random()*.003, color:from.clr, size:4+Math.random()*2.5 });
     shipCount++;
     const el=document.getElementById('logistik-counter');
     if(el) el.textContent='Sendungen: '+shipCount.toLocaleString('de-DE');
   }
-
-  // Start with some packages
-  for(let i=0;i<8;i++) setTimeout(()=>spawnPkg(), i*300);
+  for(let i=0;i<10;i++) setTimeout(spawnPkg,i*200);
 
   function resize(){
-    const rect=canvas.parentElement.getBoundingClientRect();
-    W=canvas.width=rect.width; H=canvas.height=rect.height;
+    const r=canvas.parentElement.getBoundingClientRect();
+    W=canvas.width=r.width; H=canvas.height=r.height;
   }
 
-  let frameN = 0;
   function draw(){
     animId=requestAnimationFrame(draw); frameN++;
     ctx.clearRect(0,0,W,H);
 
-    // Padding so map has margins
-    const px=W*.1, py=H*.04, mw=W*.8, mh=H*.9;
+    // Map margins — slight left padding, full height use
+    const mx=W*.04, my=H*.03, mw=W*.92, mh=H*.94;
+    const px=nx=>mx+nx*mw, py=ny=>my+ny*mh;
 
-    function mapX(nx){ return px + nx*mw; }
-    function mapY(ny){ return py + ny*mh; }
+    // Ocean background gradient
+    const bg=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,W*.7);
+    bg.addColorStop(0,'rgba(6,18,38,.0)');
+    bg.addColorStop(1,'rgba(2,8,20,.3)');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-    // Germany outline
+    // Europe filled landmass
     ctx.beginPath();
-    outline.forEach((p,i)=>{ i===0?ctx.moveTo(mapX(p.x),mapY(p.y)):ctx.lineTo(mapX(p.x),mapY(p.y)); });
+    europeOutline.forEach((p,i)=>{ i===0?ctx.moveTo(px(p.x),py(p.y)):ctx.lineTo(px(p.x),py(p.y)); });
     ctx.closePath();
-    ctx.fillStyle='rgba(10,78,163,0.06)'; ctx.fill();
-    ctx.strokeStyle='rgba(10,78,163,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
+    const landG=ctx.createLinearGradient(0,0,W,H);
+    landG.addColorStop(0,'rgba(8,42,77,.18)');
+    landG.addColorStop(.5,'rgba(10,55,100,.14)');
+    landG.addColorStop(1,'rgba(6,30,60,.18)');
+    ctx.fillStyle=landG; ctx.fill();
+    ctx.strokeStyle='rgba(10,78,163,.4)'; ctx.lineWidth=1.2; ctx.stroke();
 
-    // Routes
+    // Routes (draw all, highlight active ones)
     routes.forEach(([a,b])=>{
-      const ca=cities[a], cb=cities[b];
-      const ax=mapX(ca.x),ay=mapY(ca.y),bx=mapX(cb.x),by=mapY(cb.y);
-      const mx=(ax+bx)/2, my=(ay+by)/2-18;
-      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo(mx,my,bx,by);
-      ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
+      const ca=cities[a],cb=cities[b];
+      const ax=px(ca.x),ay=py(ca.y),bx=px(cb.x),by=py(cb.y);
+      const cpx=(ax+bx)/2, cpy=(ay+by)/2-Math.hypot(bx-ax,by-ay)*.18;
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.quadraticCurveTo(cpx,cpy,bx,by);
+      ctx.strokeStyle='rgba(59,130,246,.12)';ctx.lineWidth=.8;ctx.stroke();
     });
 
     // City nodes
     Object.values(cities).forEach(c=>{
-      const x=mapX(c.x),y=mapY(c.y);
-      // Pulse ring
-      const pulse=(Math.sin(frameN*.04+c.x*10)*.5+.5);
-      ctx.beginPath(); ctx.arc(x,y,6+pulse*4,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(10,78,163,${pulse*.3})`; ctx.lineWidth=1; ctx.stroke();
-      // Dot
-      ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
-      ctx.fillStyle='#1E3A5F'; ctx.fill();
-      ctx.strokeStyle='rgba(59,130,246,0.8)'; ctx.lineWidth=1.5; ctx.stroke();
+      const x=px(c.x),y=py(c.y);
+      const pulse=Math.sin(frameN*.035+c.x*15)*.5+.5;
+      // Outer pulse ring
+      ctx.beginPath();ctx.arc(x,y,7+pulse*5,0,Math.PI*2);
+      ctx.strokeStyle=c.clr+Math.round(pulse*.28*255).toString(16).padStart(2,'0');
+      ctx.lineWidth=1;ctx.stroke();
+      // Inner dot
+      ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);
+      ctx.fillStyle='#0E1E30';ctx.fill();
+      ctx.strokeStyle=c.clr;ctx.lineWidth=1.4;ctx.stroke();
       // Label
-      ctx.font='bold 8px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.55)';
-      ctx.textAlign='center'; ctx.fillText(c.label,x,y-8);
+      ctx.font='bold 7.5px DM Sans,sans-serif';
+      ctx.fillStyle='rgba(255,255,255,.55)';ctx.textAlign='center';
+      ctx.fillText(c.l,x,y-9);
     });
 
-    // Packages
+    // Moving packages
     for(let i=pkgs.length-1;i>=0;i--){
       const p=pkgs[i]; p.t+=p.speed;
-      if(p.t>=1){ pkgs.splice(i,1); setTimeout(spawnPkg,Math.random()*400); continue; }
-      const ax=mapX(p.from.x),ay=mapY(p.from.y),bx=mapX(p.to.x),by=mapY(p.to.y);
-      const mx=(ax+bx)/2, my=(ay+by)/2-18;
+      if(p.t>=1){ pkgs.splice(i,1); setTimeout(spawnPkg,Math.random()*500+100); continue; }
+      const ax=px(p.from.x),ay=py(p.from.y),bx=px(p.to.x),by=py(p.to.y);
+      const cpx=(ax+bx)/2, cpy=(ay+by)/2-Math.hypot(bx-ax,by-ay)*.18;
       const t=p.t;
-      // Quadratic bezier position
-      const qx=(1-t)*(1-t)*ax+2*(1-t)*t*mx+t*t*bx;
-      const qy=(1-t)*(1-t)*ay+2*(1-t)*t*my+t*t*by;
-      // Glow
-      ctx.beginPath(); ctx.arc(qx,qy,p.size+3,0,Math.PI*2);
-      ctx.fillStyle=p.color+'30'; ctx.fill();
-      // Package square
-      ctx.save(); ctx.translate(qx,qy); ctx.rotate(frameN*.05);
-      ctx.fillStyle=p.color;
-      ctx.shadowColor=p.color; ctx.shadowBlur=6;
+      const qx=(1-t)*(1-t)*ax+2*(1-t)*t*cpx+t*t*bx;
+      const qy=(1-t)*(1-t)*ay+2*(1-t)*t*cpy+t*t*by;
+      // Glow halo
+      ctx.beginPath();ctx.arc(qx,qy,p.size+4,0,Math.PI*2);
+      ctx.fillStyle=p.color+'28';ctx.fill();
+      // Package icon (small truck silhouette via rect)
+      ctx.save();ctx.translate(qx,qy);
+      ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=7;
       ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
-      ctx.shadowBlur=0; ctx.restore();
+      ctx.shadowBlur=0;
+      // Tiny highlight
+      ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.35);
+      ctx.restore();
     }
   }
 
-  function start(){ if(!active){ active=true; resize(); draw(); } }
-  function stop(){ if(animId){ cancelAnimationFrame(animId); animId=null; active=false; } }
+  function start(){ if(!active){active=true;resize();draw();} }
+  function stop(){ if(animId){cancelAnimationFrame(animId);animId=null;active=false;} }
   const obs=new IntersectionObserver(e=>{ e[0].isIntersecting?start():stop(); },{threshold:0.1});
   obs.observe(canvas.parentElement);
   window.addEventListener('resize',()=>{ if(active)resize(); },{passive:true});
