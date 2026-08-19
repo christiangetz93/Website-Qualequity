@@ -146,6 +146,21 @@ a.btn.nav-cta{display:none}
 .ov-more{margin-top:36px;text-align:center}
 .ov-more a{font-size:14.5px;font-weight:600;color:var(--accent);border-bottom:1.5px solid var(--gold);padding-bottom:2px}
 
+/* ── Trigger / Zielgruppen-Sektion ── */
+.trig-grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:700px){.trig-grid{grid-template-columns:1fr 1fr}}
+.trig-card{display:flex;gap:14px;align-items:flex-start;padding:22px 24px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line)}
+.trig-ic{width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;color:var(--accent);margin-top:2px}
+.trig-card p{font-size:14.5px;color:var(--ink);font-weight:500;line-height:1.5}
+.trig-cta{margin-top:32px;text-align:center}
+
+/* ── Lead-Magnet-Streifen ── */
+.magnet{padding:56px 0}
+.magnet-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px;padding:34px 38px;border-radius:20px;background:var(--bg-2);border:1px solid var(--line)}
+.magnet-txt h3{font-size:1.2rem;margin-bottom:8px}
+.magnet-txt p{font-size:14.5px;color:var(--ink-soft);max-width:46ch}
+.magnet-box .btn{flex-shrink:0}
+
 /* ── section base ── */
 section{padding:88px 0}
 .alt{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -273,6 +288,15 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:56px 0 26px}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 </style>
+<!--
+  Analytics: Plausible (cookie-frei, kein Consent-Banner nötig, DSGVO-konform).
+  Aktivierung: Konto auf plausible.io anlegen (oder selbst hosten) und die
+  Domain "qualequity.de" dort hinterlegen — dann läuft es ohne Codeänderung.
+  Bis dahin lädt das Script einfach ins Leere, ohne die Seite zu beeinträchtigen.
+  Alternative ohne jegliches Script: Netlify Analytics (serverseitig, kostenpflichtig,
+  im Netlify-Dashboard aktivierbar) — dann diesen Tag einfach entfernen.
+-->
+<script defer data-domain="qualequity.de" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
 <a href="#main" class="skip-link">Zum Inhalt springen</a>
@@ -398,6 +422,44 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:56px 0 26px}
   </div>
 </section>
 
+<!-- ══ ERKENNEN SIE SICH WIEDER? ══ -->
+<section id="situation" aria-labelledby="trig-h">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Passt das zu Ihrer Situation?</p>
+      <h2 id="trig-h">Erkennen Sie sich wieder?</h2>
+      <p>Das sind die Situationen, in denen Unternehmen typischerweise auf mich zukommen.</p>
+    </div>
+    <div class="trig-grid">
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></div>
+        <p>Sie bauen gerade ein Managementsystem neu auf — und wissen nicht genau, wo Sie anfangen sollen.</p>
+      </div>
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+        <p>Ihr bestehendes System funktioniert, ist aber unnötig aufwendig und wird im Alltag kaum gelebt.</p>
+      </div>
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg></div>
+        <p>Eine Erstzertifizierung steht an, und Sie brauchen eine strukturierte Vorbereitung.</p>
+      </div>
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <p>Ein Rezertifizierungs- oder Überwachungsaudit rückt näher, und intern fehlt die Kapazität.</p>
+      </div>
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></div>
+        <p>Sie führen mehrere Managementsysteme parallel und wollen sie zu einem integrierten System zusammenführen.</p>
+      </div>
+      <div class="trig-card reveal">
+        <div class="trig-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <p>Ihr interner Managementbeauftragter fällt aus oder verlässt das Unternehmen, und Sie brauchen kurzfristig Unterstützung.</p>
+      </div>
+    </div>
+    <p class="trig-cta"><a href="#kontakt" class="btn btn-primary">Passt etwas davon? Lassen Sie uns sprechen</a></p>
+  </div>
+</section>
+
 <!-- ══ ÜBER MICH ══ -->
 <section class="alt" id="ueber-mich" aria-labelledby="about-h">
   <div class="wrap">
@@ -419,6 +481,7 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:56px 0 26px}
           <p>Mein fachlicher Schwerpunkt liegt auf ISO&nbsp;9001 (Qualitätsmanagement), ISO&nbsp;14001 (Umweltmanagement), ISO&nbsp;50001 (Energiemanagement) und ISO&nbsp;31000 (Risikomanagement) sowie auf integrierten Managementsystemen, internen Audits, Prozessmanagement, kontinuierlicher Verbesserung und der Vorbereitung auf externe Audits und Zertifizierungen.</p>
           <blockquote class="pull">„Ich kenne die Norm nicht nur aus Büchern – ich weiß, wie sie in einem echten Unternehmen funktionieren muss."</blockquote>
           <p>Was mich von klassischer Beratung unterscheidet: Ich verbinde Normanforderungen mit tatsächlicher Unternehmenspraxis. Ich weiß nicht nur, was eine Norm verlangt — sondern auch, was passiert, wenn diese Anforderungen auf reale Prozesse, Mitarbeiterstrukturen und den Tagesbetrieb treffen. Genau das bringe ich in jedes Beratungsprojekt ein.</p>
+          <p>Weil ich Qualequity neben meiner Haupttätigkeit betreibe, arbeite ich bewusst mit wenigen Unternehmen gleichzeitig — damit jedes Projekt die Aufmerksamkeit bekommt, die es braucht, statt in einer langen Mandantenliste unterzugehen.</p>
         </div>
       </div>
     </div>
@@ -573,6 +636,19 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:56px 0 26px}
       <div class="why-card reveal"><span class="why-n">06</span><h4>Keine unnötige Bürokratie</h4><p>Schlanke Dokumentation, die im Alltag genutzt wird statt im Ordner zu verstauben.</p></div>
       <div class="why-card reveal"><span class="why-n">07</span><h4>Individuell statt Standardlösung</h4><p>Jedes Unternehmen ist anders — jede Beratung wird entsprechend zugeschnitten.</p></div>
       <div class="why-card reveal"><span class="why-n">08</span><h4>Messbarer Nutzen</h4><p>Weniger Risiken, klarere Prozesse, mehr Orientierung für Ihre Mitarbeitenden.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LEAD-MAGNET ══ -->
+<section class="magnet">
+  <div class="wrap">
+    <div class="magnet-box reveal">
+      <div class="magnet-txt">
+        <h3>Noch nicht bereit für ein Gespräch?</h3>
+        <p>Der 5-Punkte-Selbstcheck hilft Ihnen, in wenigen Minuten selbst einzuschätzen, wo Ihr Managementsystem heute steht — kostenlos, ohne Anmeldung.</p>
+      </div>
+      <a class="btn btn-ghost" href="assets/qualequity-selbstcheck.pdf" download>Selbstcheck herunterladen (PDF)</a>
     </div>
   </div>
 </section>
